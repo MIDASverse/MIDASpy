@@ -4,10 +4,12 @@ Created on Sat Oct  7 21:18:52 2017
 
 @author: Alex
 """
-
+from matplotlib.ticker import MultipleLocator
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from sklearn.metrics import mean_squared_error as mse
 
 class MIDAS(object):
   """
@@ -32,6 +34,7 @@ class MIDAS(object):
     self.savepath = savepath
     self.model = None
     self.query_input = query_input
+    self.additional_data = None
 
 
   def _batch_iter(self,
@@ -43,7 +46,10 @@ class MIDAS(object):
 
     for start_idx in range(0, train_data.shape[0] - b_size + 1, b_size):
       excerpt = indices[start_idx:start_idx + b_size]
-      yield train_data[excerpt], na_mask[excerpt]
+      if self.additional_data is None:
+        yield train_data[excerpt], na_mask[excerpt]
+      else:
+        yield train_data[excerpt], na_mask[excerpt], self.additional_data.values[excerpt]
 
   def _batch_iter_output(self,
                   train_data,
@@ -52,7 +58,10 @@ class MIDAS(object):
 
     for start_idx in range(0, train_data.shape[0], b_size):
       excerpt = indices[start_idx:start_idx + b_size]
-      yield train_data[excerpt]
+      if self.additional_data is None:
+        yield train_data[excerpt]
+      else:
+        yield train_data[excerpt], self.additional_data.values[excerpt]
 
   def _build_layer(self,
                    X,
@@ -88,6 +97,7 @@ class MIDAS(object):
                 categorical_columns= None,
                 softmax_columns= None,
                 unsorted= True,
+                additional_data = None,
                 verbose= True):
     """
     The categorical columns should be a list of column names. Softmax columns
@@ -101,12 +111,16 @@ class MIDAS(object):
     dynamically doesn't become too difficult.
     """
     if not isinstance(imputation_target, pd.DataFrame):
-      raise TypeError("Input data must be contained within a DataFrame")
+      raise TypeError("Input data must be in a DataFrame")
 
     self.original_columns = imputation_target.columns
     cont_exists = False
     cat_exists = False
     in_size = imputation_target.shape[1]
+    if additional_data is not None:
+      add_size = additional_data.shape[1]
+    else:
+      add_size = 0
 
     # Establishing indices for cost function
     size_index = []
@@ -136,8 +150,9 @@ class MIDAS(object):
     if verbose:
       print("Size index:", size_index)
 
-    self.na_matrix = imputation_target.notnull().astype(bool).values
+    self.na_matrix = imputation_target.notnull().astype(bool)
     self.imputation_target = imputation_target.fillna(0)
+    self.additional_data = additional_data.fillna(0)
 
     #Build graph
     tf.reset_default_graph()
@@ -145,9 +160,10 @@ class MIDAS(object):
     with self.graph.as_default():
       self.X = tf.placeholder('float', [None, in_size])
       self.na_idx = tf.placeholder(tf.bool, [None, in_size])
-
+      if additional_data is not None:
+        self.X_add = tf.placeholder('float', [None, add_size])
       struc_list = self.layer_structure.copy()
-      struc_list.insert(0, in_size)
+      struc_list.insert(0, in_size + add_size)
       struc_list.append(in_size)
       _w = []
       _b = []
@@ -168,7 +184,11 @@ class MIDAS(object):
           else:
             X = self._build_layer(X, _w[n], _b[n])
         return X
-      self.impute = impute(self.X)
+
+      if additional_data is not None:
+        self.impute = impute(tf.concat([self.X, self.X_add], axis= 1))
+      else:
+        self.impute = impute(self.X)
 
       #Output functions
       output_list = []
@@ -184,7 +204,7 @@ class MIDAS(object):
         if n == 0:
           if cont_exists:
             output_list.append(pred_temp)
-            cost_list.append(tf.reduce_mean(tf.squared_difference(t_t, p_t)))
+            cost_list.append(tf.sqrt(tf.reduce_mean(tf.squared_difference(t_t, p_t))))
           elif cat_exists:
             output_list.append(tf.nn.sigmoid(pred_temp))
             cost_list.append(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
@@ -223,11 +243,12 @@ class MIDAS(object):
   def train_model(self,
                   training_epochs= 100,
                   batch_size= 16,
-                  verbose= True):
+                  verbose= True,
+                  verbosity_ival= 1):
     if not self.model_built:
       raise AttributeError("The computation graph must be built before the model can be trained")
-    feed_data = self.imputation_target.copy().values
-    na_loc = self.na_matrix.copy()
+    feed_data = self.imputation_target.values
+    na_loc = self.na_matrix.values
     with tf.Session(graph= self.graph) as sess:
       sess.run(self.init)
       print("Model initialised")
@@ -236,14 +257,16 @@ class MIDAS(object):
         count = 0
         run_loss = 0
         for batch in self._batch_iter(feed_data, na_loc, batch_size):
-          batch_data, batch_mask = batch
+          feedin = {self.X: batch[0], self.na_idx: batch[1]}
+          if self.additional_data is not None:
+            feedin[self.X_add] = batch[2]
           loss, _ = sess.run([self.joint_loss, self.train_step],
-                             feed_dict= {self.X: batch_data,
-                                         self.na_idx: batch_mask})
+                             feed_dict= feedin)
           count +=1
           run_loss += loss
         if verbose:
-          print('Epoch:', epoch, ", loss:", str(run_loss/count))
+          if epoch % verbosity_ival == 0:
+            print('Epoch:', epoch, ", loss:", str(run_loss/count))
       print("Training complete. Saving file...")
       save_path = self.saver.save(sess, self.savepath)
       print("Model saved in file: %s" % save_path)
@@ -259,11 +282,14 @@ class MIDAS(object):
       print("Model restored.")
       for n in range(m):
         feed_data = self.imputation_target.copy().values
+        feedin = {self.X: feed_data}
+        if self.additional_data is not None:
+          feedin[self.X_add] = self.additional_data
         y_out = pd.DataFrame(sess.run(self.output_op,
-                                             feed_dict= {self.X: feed_data}),
+                                             feed_dict= feedin),
                                 columns= self.imputation_target.columns)
         output_df = self.imputation_target.copy()
-        output_df[np.invert(self.na_matrix)] = y_out[np.invert(self.na_matrix)]
+        output_df[np.invert(self.na_matrix.values)] = y_out[np.invert(self.na_matrix.values)]
         self.output_list.append(output_df)
     return self
 
@@ -276,11 +302,14 @@ class MIDAS(object):
       print("Model restored.")
       for n in range(m):
         feed_data = self.imputation_target.copy().values
+        feedin = {self.X: feed_data}
+        if self.additional_data is not None:
+          feedin[self.X_add] = self.additional_data
         y_out = pd.DataFrame(sess.run(self.output_op,
-                                           feed_dict= {self.X: feed_data}),
+                                           feed_dict= feedin),
                                 columns= self.imputation_target.columns)
         output_df = self.imputation_target.copy()
-        output_df[np.invert(self.na_matrix)] = y_out[np.invert(self.na_matrix)]
+        output_df[np.invert(self.na_matrix.values)] = y_out[np.invert(self.na_matrix.values)]
         yield output_df
     return self
 
@@ -302,14 +331,17 @@ class MIDAS(object):
         feed_data = self.imputation_target.copy().values
         minibatch_list = []
         for batch in self._batch_iter_output(feed_data, b_size):
+          feedin = {self.X: batch[0]}
+          if self.additional_data is not None:
+            feedin[self.X_add] = batch[1]
           y_batch = pd.DataFrame(sess.run(self.output_op,
-                                        feed_dict= {self.X: batch}),
+                                        feed_dict= feedin),
                                columns= self.imputation_target.columns)
           minibatch_list.append(y_batch)
         y_out = pd.DataFrame(pd.concat(minibatch_list, ignore_index= True),
                              columns= self.imputation_target.columns)
         output_df = self.imputation_target.copy()
-        output_df[np.invert(self.na_matrix)] = y_out[np.invert(self.na_matrix)]
+        output_df[np.invert(self.na_matrix.values)] = y_out[np.invert(self.na_matrix.values)]
         self.output_list.append(output_df)
     return self
 
@@ -330,18 +362,113 @@ class MIDAS(object):
         feed_data = self.imputation_target.copy().values
         minibatch_list = []
         for batch in self._batch_iter_output(feed_data, b_size):
+          feedin = {self.X: batch[0]}
+          if self.additional_data is not None:
+            feedin[self.X_add] = batch[1]
           y_batch = pd.DataFrame(sess.run(self.output_op,
-                                        feed_dict= {self.X: batch}),
+                                        feed_dict= feedin),
                                columns= self.imputation_target.columns)
           minibatch_list.append(y_batch)
         y_out = pd.DataFrame(pd.concat(minibatch_list, ignore_index= True),
                              columns= self.imputation_target.columns)
         output_df = self.imputation_target.copy()
-        output_df[np.invert(self.na_matrix)] = y_out[np.invert(self.na_matrix)]
+        output_df[np.invert(self.na_matrix.values)] = y_out[np.invert(self.na_matrix.values)]
         yield output_df
     return self
 
+  def overimpute(self,
+                 spikein = 0.1,
+                 training_epochs= 100,
+                 report_ival = 10,
+                 report_samples = 32,
+                 batch_size= 16,
+                 verbose= True,
+                 verbosity_ival= 1,
+                 seed= 42):
+    if not self.model_built:
+      raise AttributeError("The computation graph must be built before the model can be trained")
+    feed_data = self.imputation_target.copy()
+    na_loc = self.na_matrix.copy()
+    np.random.seed(seed)
+    spike = pd.DataFrame(np.random.choice([True, False],
+                                          size= self.imputation_target.shape,
+                                          p= [spikein, 1-spikein]))
+    spike[np.invert(na_loc.values)] = False
+    spike = spike.values
+    feed_data[spike] = 0
+    feed_data =  feed_data.values
+    na_loc[spike] = False
+    na_loc = na_loc.values
+    s_rmse = []
+    a_rmse = []
+    with tf.Session(graph= self.graph) as sess:
+      sess.run(self.init)
+      print("Model initialised")
+      print()
+      for epoch in range(training_epochs + 1):
+        count = 0
+        run_loss = 0
+        for batch in self._batch_iter(feed_data, na_loc, batch_size):
+          feedin = {self.X: batch[0], self.na_idx: batch[1]}
+          if self.additional_data is not None:
+            feedin[self.X_add] = batch[2]
+          loss, _ = sess.run([self.joint_loss, self.train_step],
+                             feed_dict= feedin)
+          count +=1
+          run_loss += loss
+        if verbose:
+          if epoch % verbosity_ival == 0:
+            print('Epoch:', epoch, ", loss:", str(run_loss/count))
 
+        if epoch % report_ival == 0:
+          single_rmse = 0
+          first =  True
+          for sample in range(report_samples):
+            minibatch_list = []
+            for batch in self._batch_iter_output(feed_data, batch_size):
+              feedin = {self.X: batch[0]}
+              if self.additional_data is not None:
+                feedin[self.X_add] = batch[1]
+              y_batch = pd.DataFrame(sess.run(self.output_op,
+                                              feed_dict= feedin),
+                                      columns= self.imputation_target.columns)
+              minibatch_list.append(y_batch)
+            y_out = pd.DataFrame(pd.concat(minibatch_list, ignore_index= True),
+                                 columns= self.imputation_target.columns)
+            single_rmse += np.sqrt(mse(self.imputation_target[spike], y_out[spike]))
+            if first:
+              running_output = y_out
+              first= False
+            else:
+              running_output += y_out
+          single_rmse = single_rmse / report_samples
+          y_out = running_output / report_samples
+          agg_rmse = np.sqrt(mse(self.imputation_target[spike], y_out[spike]))
+          print("Mean individual RMSE on spike-in data:", single_rmse)
+          print("Aggregated RMSE on spike-in data:", agg_rmse)
+          s_rmse.append(single_rmse)
+          a_rmse.append(agg_rmse)
+          min_s = min(s_rmse)
+          min_a = min(a_rmse)
+          plt.plot(s_rmse, 'g-', label= "Mean individual RMSE")
+          plt.plot(a_rmse, 'k-', label= "Aggregated RMSE")
+          plt.plot([min_s]*len(s_rmse), 'b:')
+          plt.plot([min_a]*len(a_rmse), 'b:')
+          plt.plot(s_rmse.index(min(s_rmse)),
+                   min_s, 'rx')
+          plt.plot(a_rmse.index(min(a_rmse)),
+                   min_a, 'rx')
+          plt.legend()
+          plt.title("Spike-in RMSE as training progresses")
+          plt.ylim(ymin= 0)
+          plt.ylabel("RMSE")
+          plt.xlabel("Report interval")
+          plt.show()
+
+
+
+      print("Overimputation complete. Adjust complexity as needed.")
+      return self
 
 
 
