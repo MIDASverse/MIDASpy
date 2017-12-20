@@ -44,6 +44,9 @@ class MIDAS(object):
                   train_data,
                   na_mask,
                   b_size = 16):
+    """
+    Function for handling the batch feeds for training loops
+    """
     indices = np.arange(train_data.shape[0])
     np.random.shuffle(indices)
 
@@ -58,6 +61,9 @@ class MIDAS(object):
                   train_data,
                   b_size = 256):
     indices = np.arange(train_data.shape[0])
+    """
+    Identical to _batch_iter(), although designed for a single datasource
+    """
 
     for start_idx in range(0, train_data.shape[0], b_size):
       excerpt = indices[start_idx:start_idx + b_size]
@@ -72,6 +78,9 @@ class MIDAS(object):
                    bias_vec,
                    dropout_rate= 0.5,
                    output_layer= False):
+    """
+    Constructs layers for the build function
+    """
     X_tx = tf.matmul(tf.nn.dropout(X, dropout_rate), weight_matrix) + bias_vec
     if output_layer:
       return X_tx
@@ -84,13 +93,25 @@ class MIDAS(object):
                        num_in,
                        num_out,
                        scale= 1):
+    """
+    Custom initialiser for a weights, using a variation on Xavier initialisation
+    with smaller starting weights. Allows for faster convergence on low learn
+    rates, useful in the presence of multiple loss functions
+    """
     weights.append(tf.Variable(tf.truncated_normal([num_in, num_out],
                                                    mean = 0,
                                                    stddev = scale / np.sqrt(num_in + num_out))))
     biases.append(tf.Variable(tf.zeros([num_out]))) #Bias can be zero
     return weights, biases
 
-  def _sort_cols(self, data, subset):
+  def _sort_cols(self,
+                 data,
+                 subset):
+    """
+    This function is used to sequence the columns of the dataset, so as to be in
+    the order [Continuous data], [Binary data], [Categorical data]. It simply
+    rearranges a column, done functionally to minimise memory overhead
+    """
     data_1 = data[subset]
     data_0 = data.drop(subset, axis= 1)
     chunk = data_1.shape[1]
@@ -114,7 +135,9 @@ class MIDAS(object):
     for each of the relevant categories.
 
     In other words, pre-sort your data and pass in the integers, so indexing
-    dynamically doesn't become too difficult.
+    dynamically doesn't become too difficult. Alternatively, list(df.columns.values)
+    will output a list of column names, which can be easily implemented in the
+    'for' loop which constructs your dummy variables.
     """
     if not isinstance(imputation_target, pd.DataFrame):
       raise TypeError("Input data must be in a DataFrame")
@@ -155,8 +178,9 @@ class MIDAS(object):
       if not sum(size_index) == in_size:
         raise ValueError("Sorting columns has failed")
     if verbose:
-
       print("Size index:", size_index)
+
+    #Commit some variables to the instance of the class
     self.size_index = size_index
     self.na_matrix = imputation_target.notnull().astype(bool)
     self.imputation_target = imputation_target.fillna(0)
@@ -169,13 +193,19 @@ class MIDAS(object):
     with self.graph.as_default():
       if self.seed is not None:
         tf.set_random_seed(self.seed)
+
+      #Placeholders
       self.X = tf.placeholder('float', [None, in_size])
       self.na_idx = tf.placeholder(tf.bool, [None, in_size])
       if additional_data is not None:
         self.X_add = tf.placeholder('float', [None, add_size])
+
+      #Build list for determining input and output structures
       struc_list = self.layer_structure.copy()
       struc_list.insert(0, in_size + add_size)
       struc_list.append(in_size)
+
+      #Instantiate and initialise variables
       _w = []
       _b = []
 
@@ -185,6 +215,7 @@ class MIDAS(object):
                                        num_out= struc_list[n+1],
                                        scale= crossentropy_adj)
 
+      #Build the neural network. Each layer is determined by the struc list
       def impute(X):
         for n in range(len(struc_list) -1):
           if n == 0:
@@ -197,6 +228,8 @@ class MIDAS(object):
             X = self._build_layer(X, _w[n], _b[n])
         return X
 
+      #Determine which imputation function is to be used. This is constructed to
+      #take advantage of additional data provided.
       if additional_data is not None:
         self.impute = impute(tf.concat([self.X, self.X_add], axis= 1))
       else:
@@ -213,6 +246,8 @@ class MIDAS(object):
         true_temp = tf.split(self.X, size_index, axis= 1)[n]
         p_t = tf.boolean_mask(pred_temp, na_temp)
         t_t = tf.boolean_mask(true_temp, na_temp)
+        #This control flow breaks down the various input data based on the columns
+        #passed to
         if n == 0:
           if cont_exists:
             output_list.append(pred_temp)
@@ -279,6 +314,10 @@ class MIDAS(object):
                   verbose= True,
                   verbosity_ival= 1,
                   excessive= False):
+    """
+    This is the standard method for optimising the model's parameters. Must be called
+    before imputation can be performed.
+    """
     if not self.model_built:
       raise AttributeError("The computation graph must be built before the model can be trained")
     if self.seed is not None:
@@ -440,6 +479,35 @@ class MIDAS(object):
                  spike_seed= 42,
                  excessive= False
                  ):
+    """
+    This function spikes in additional missingness, so that known values can be
+    used to help adjust the complexity of the model.
+
+    Error is defined as RMSE for continuous variables, and classification error
+    for binary and categorical variables (ie. 1 - accuracy). Note that this means
+    that binary classification is inherently dependent on a selection threshold
+    of 0.5, and softmax accuracy will automatically decrease as a function of the
+    number of classes within the model. All three will be affected by the degree
+    of imbalance within the dataset.
+
+    The accuracy measures provided here may not be ideal for all problems, but
+    they are generally appropriate for selecting optimum complexity. Should the
+    lines denoting error begin to trend upwards, this indicates overtraining and
+    is a sign that the training_epochs parameter to the .train_model() method should
+    be capped before this point.
+
+    The actual optimal point may differ from that indicated by the .overimpute()
+    method for two reasons:
+      -The loss that is spiked in reduces the overall data available to the algorithm
+      to learn the patterns inherent, so there should be some improvement in performance
+      when .train_model() is called. If this is a concern, then it should be possible
+      to compare the behaviour of the loss figure between .train_model() and
+      .overimpute().
+      -The missingness inherent to the data may depend on some unobserved factor.
+      In this case, the bias in the observed data may lead to inaccurate inference.
+    """
+    #These values simplify control flow used later for error calculation and
+    #visualisation of convergence.
     rmse_in = False
     sacc_in = False
     bacc_in = False
@@ -448,7 +516,7 @@ class MIDAS(object):
     if 'rmse' in self.output_types:
       rmse_in = True
     if 'sacc' in self.output_types:
-      def sacc(true, pred, spike):
+      def sacc(true, pred, spike): #Softmax accuracy
         a = np.argmax(true, 1)
         b = np.argmax(pred, 1)
         return np.sum(a[spike.flatten()] == b[spike.flatten()]) / np.sum(spike)
@@ -460,14 +528,17 @@ class MIDAS(object):
         return np.sum(true[spike] == pred[spike]) / np.sum(spike)
       bacc_in = True
 
-
-
     feed_data = self.imputation_target.copy()
     na_loc = self.na_matrix
     np.random.seed(spike_seed)
-    n_softmax = 0
+    n_softmax = 0 #Necessary to derive the average classification error
+
+    #Pandas lacks an equivalent to tf.split, so this is used to divide columns
+    #for their respective error metrics
     break_list = list(np.cumsum(self.size_index))
     break_list.insert(0, 0)
+
+    #Generate spike-in
     spike = []
     for n in range(len(self.size_index)):
       if self.output_types[n] == 'sacc':
@@ -491,6 +562,8 @@ class MIDAS(object):
     na_loc[spike] = False
     spike = spike.values
     na_loc = na_loc.values
+
+    #Initialise lists for plotting
     s_rmse = []
     a_rmse = []
     s_bacc = []
@@ -524,6 +597,11 @@ class MIDAS(object):
             print('Epoch:', epoch, ", loss:", str(run_loss/count))
 
         if epoch % report_ival == 0:
+          """
+          For each report interval, generate report_samples worth of imputations
+          and measure both individual and aggregate error values
+          """
+          #Initialise losses
           single_rmse = 0
           single_sacc = 0
           single_bacc = 0
@@ -543,6 +621,8 @@ class MIDAS(object):
               minibatch_list.append(y_batch)
             y_out = pd.DataFrame(pd.concat(minibatch_list, ignore_index= True),
                                  columns= self.imputation_target.columns)
+
+            #Calculate individual imputation losses
             for n in range(len(self.size_index)):
               temp_pred = y_out.iloc[:,break_list[n]:break_list[n+1]]
               temp_true = self.imputation_target.iloc[:,break_list[n]:break_list[n+1]]
@@ -558,7 +638,6 @@ class MIDAS(object):
               else:
                 single_bacc += 1 - bacc(temp_true.values, temp_pred.values, temp_spike)
 
-
             if first:
               running_output = y_out
               first= False
@@ -568,20 +647,26 @@ class MIDAS(object):
           single_sacc = single_sacc / report_samples
           single_bacc = single_bacc / report_samples
           y_out = running_output / report_samples
+
+          #Calculate aggregate imputation losses
+          agg_rmse = 0
+          agg_sacc = 0
+          agg_bacc = 0
           for n in range(len(self.size_index)):
             temp_pred = y_out.iloc[:,break_list[n]:break_list[n+1]]
             temp_true = self.imputation_target.iloc[:,break_list[n]:break_list[n+1]]
             temp_spike = spike[:,break_list[n]:break_list[n+1]]
             if self.output_types[n] == 'sacc':
               temp_spike = temp_spike[:,0]
-              agg_sacc = (1 - sacc(temp_true.values, temp_pred.values,
+              agg_sacc += (1 - sacc(temp_true.values, temp_pred.values,
                                    temp_spike)) / n_softmax
             elif self.output_types[n] == 'rmse':
-              agg_rmse = np.sqrt(mse(temp_true[temp_spike],
+              agg_rmse += np.sqrt(mse(temp_true[temp_spike],
                                          temp_pred[temp_spike]))
             else:
-              agg_bacc = 1 - bacc(temp_true.values, temp_pred.values, temp_spike)
+              agg_bacc += 1 - bacc(temp_true.values, temp_pred.values, temp_spike)
 
+          #Plot losses depending on which loss values present in data
           if rmse_in:
             s_rmse.append(single_rmse)
             a_rmse.append(agg_rmse)
@@ -628,6 +713,7 @@ class MIDAS(object):
             plt.plot(a_bacc.index(min(a_bacc)),
                    min_ab, 'rx')
 
+          #Complete plots
           plt.title("Spike-in error levels as training progresses")
           plt.ylabel("Error (see documentation for details)")
           plt.legend()
@@ -637,22 +723,4 @@ class MIDAS(object):
 
       print("Overimputation complete. Adjust complexity as needed.")
       return self
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
