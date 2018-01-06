@@ -25,6 +25,8 @@ Planned features:
   -Tensorboard integration
   
   -Dropout scaling
+  
+  -A modified constructor that can generate embeddings for better interpolation of features
  
 Wish list:
 
