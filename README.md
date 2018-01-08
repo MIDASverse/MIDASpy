@@ -1,8 +1,8 @@
 # MIDAS - Multiple Imputation with Denoising Autoencoders
 
-Missing data is a widespread problem in machine learning. Bayesian inference is a robust solution to imputing missing values, particularly if multiple imputations are used to model the uncertainty regarding said values. Unfortunately, most existing MI programs are slow due the the sequential nature of the calculations. While some can be parallelised, not all MI programs have this functionality. Additionally, EM-based MI cannot scale to larger datasets, as the computation time scales geometrically with number of features.
+Missing data is a widespread problem in machine learning. Bayesian inference is a robust solution to imputing missing values, particularly if multiple imputations are used to model the uncertainty regarding said values. Unfortunately, most existing MI programs are slow due the the sequential nature of the calculations. While some can be parallelised, not all MI programs have this functionality. Generally, these programs scale in geometric time with both size of dataset and missingness.
 
-By comparison, neural networks are high performance, scalable machine learning solutions capable of distributed training and inference. When trained with Monte Carlo dropout, a neural network is capable of approximate Bayesian inference while being trained in linear time. Denoising autoencoders represent one implementation of a neural network, which is trained to reconstruct a corrupted input. With some manipulation, they can be coerced to handle missing data. This is why MIDAS was created. MIDAS allows the most advanced algorithms in machine learning to be applied to the imputation of missing data, leveraging the principle of Bayesian nonparametrics to minimise bias and inaccuracy in imputed values.
+When trained with Monte Carlo dropout, a neural network is capable of approximate Bayesian inference while scaling in linear time relative to dataset, and regardless of missingness. Compared to existing methods, neural network-based MI is a high performance, scalable machine learning solutions capable of distributed training and inference. Denoising autoencoders represent one implementation of a neural network, which is trained to reconstruct a corrupted input. With some manipulation, they can be coerced to handle missing data. This is why MIDAS was created. MIDAS allows the most advanced algorithms in machine learning to be applied to the imputation of missing data, leveraging the principle of Bayesian nonparametrics to minimise bias and inaccuracy in imputed values.
 
 Installation
 ------------
@@ -27,17 +27,19 @@ Basic functionality feature-complete. Additional features will be added, but MID
 
 Current features:
 
-  -Support for categorical and continuous data types
+  -Support for mixed categorical and continuous data types
   
   -An "additional data" pipeline, allowing data which may be relevant to the imputation to be included, without being included in error       generating statistics
   
-  -Simplified calibration for model complexity through the "overimputation" function
+  -Simplified calibration for model complexity through the "overimputation" function, including visualisation of reconstructed features
+  
+  -Basic large dataset functionality
  
 Planned features:
 
   -Time dependence handling through recurrent cells
   
-  -API for SQL/Hadoop queries for big data pipelines
+  -Improving the pipeline methods for very large datasets
   
   -Tensorboard integration
   
