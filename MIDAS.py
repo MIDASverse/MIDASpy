@@ -1,9 +1,19 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Oct  7 21:18:52 2017
 
-@author: Alex
-"""
+# Copyright 2017 Alex Stenlake. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -12,32 +22,152 @@ from sklearn.metrics import mean_squared_error as mse
 
 class MIDAS(object):
   """
-  All categorical variables have to be converted to onehot before the
-  algorithm can process everything. I might integrate this process into
-  the workflow later, should pandas get a reverse_dummies function that
-  would allow the reverse transform. For now, all input must take the
-  form of a pandas dataframe
+  Welcome, and thank you for downloading your new script! Thank you for choosing
+  MIDAS, the missing data solution of the present - today!
+
+  Japes aside, a few points to note.
+
+  For now, all input must take the form of a Pandas DataFrame. Pandas is the only
+  library with the kind of flexible indexing that I required. While it might not
+  be as fast as a pure Numpy based solution, it is still quite fast - and allows
+  for mask-based indexing and reindexing.
+
+  All categorical variables have to be converted to onehot before the algorithm
+  can process anything. I might integrate this process into the workflow later,
+  should pandas get a reverse_dummies function that would allow the reverse
+  transform. This will also change when I implement embedding for sparse variables.
+
+  Neural networks are unpredictable models, where things as small as scaling method
+  may have major implications for inference. Try to scale to between 0 and 1, or
+  between -1 and 1, as this will help the weight updates be more gradual (and thus
+  the learned representation will be more accurate). By the same token, feel
+  free to experiment.
+
+  The general form of a call to MIDAS takes the following form:
+    from MIDAS import MIDAS
+
+    imputer = MIDAS()
+    imputer.build_model(data)
+    imputer.generate_samples()
+    for dataset in imputer.output_list:
+      print(dataset)
+
+  Of course, the specifics of how the data is generated and accessed depends on
+  the intended application.
+
+  Very little of the tech and research behind this project is my own work. Most
+  of it is based on Larochelle's work on denoising autoencoders, Gal's work on
+  Bayesian dropout and the combined questions/answers of the internet's data
+  science community. I'm just the guy who put it together and made it work. Full
+  credit goes to all those people whose ideas kept me up at 2am, coding.
+
+  This is my first programming project. Feedback, contributions and criticism
+  equally welcomed.
+
+  https://github.com/Oracen/MIDAS
   """
 
   def __init__(self,
                layer_structure= [256, 256, 256],
                learn_rate= 1e-4,
                input_drop= 0.8,
-               savepath= 'tmp/MIDAS',
                train_batch = 16,
+               savepath= 'tmp/MIDAS',
                seed= None,
-               query_input= False #Placeholder
+               loss_scale= 1,
+               init_scale= 1,
+               softmax_adj= 1,
                ):
+    """
+    Initialiser. Called separately to 'build_model' to allow for out-of-memory
+    datasets. All key hyperparameters are entered at this stage, as the model
+    construction methods only deal with the dataset.
+
+    Args:
+      layer_structure: List of integers. Specifies the pattern by which the model
+      contstruction methods will instantiate a neural network. For reference, the
+      default layer structure is a three-layer network, with each layer containing
+      256 units. Larger networks can learn more complex representations of data,
+      but also require longer and longer training times. Due to the large degree
+      of regularisation used by MIDAS, making a model "too big" is less of a problem
+      than making it "too small". If training time is relatively quick, but you
+      want improved performance, try increasing the size of the layers or, as an
+      alternative, add more layers. (More layers generally corresponds to learning
+      more complex relationships.) As a rule of thumb, I keep the layers to powers
+      of two - not only does this narrow my range of potential size values to
+      search through, but apparently also helps with network assignment to memory.
+
+      learn_rate: Float. This specifies the default learning rate behaviour for
+      the training stage. In general, larger numbers will give faster training,
+      smaller numbers more accurate results. If a cost is exploding (ie. increasing
+      rather than decreasing), then the first solution tried ought to be reducing
+      the learning rate.
+
+      input_drop: Float between 0 and 1. The 'keep' probability of each input
+      column per training batch. A higher value will allow more data into MIDAS
+      per draw, while a lower number seems to render the aggregated posterior
+      more robust to bias from the data. (This effect will require further
+      investigation, but the central tendency of the posterior seems to fall
+      closer to the true value.) Empirically, a number between 0.7 and 0.95 works
+      best. Numbers close to 1 reduce or eliminate the regularising benefits of
+      input noise, as well as converting the model to a simple neural network
+      regression.
+
+      train_batch: Integer. The batch size of each training pass. Larger batches
+      mean more stable loss, as biased sampling is less likely to present an issue.
+      However, the noise generated from smaller batches, as well as the greater
+      number of training updates per epoch, allows the algorithm to converge to
+      better optima. Research suggests the ideal number lies between 8 and 512
+      observations per batch. I've found that 16 seems to be ideal, and would
+      only consider reducing it on enormous datasets where memory management is
+      a concern.
+
+      savepath: String. Specifies the location to which Tensorflow will save the
+      trained model.
+
+      seed: Integer. Initialises the pseudorandom number generator to a set
+      value. Important if you want your results to be reproducible.
+
+      loss_scale: Float. Instantiates a constant to multiply the loss function
+      by. If there are a large number of losses, this is a method that can be used
+      to attempt to prevent overtraining while also allowing for a larger learning
+      rate. With general SGD, this would be equivalent to a modifier of the learn
+      rate, but this interacts differently with AdaM due to its adaptive learn
+      rate. Useful only in some circumstances.
+
+      init_scale: Float. MIDAS is initialised with a variant of Xavier initialisation,
+      where a numerator of 1 is used instead of a 6. For deeper networks, larger
+      values might be useful to prevent dying gradients - although with ELU
+      activations, this is less of a concern. Can be reduced if early training
+      is characterised by exploding gradients.
+
+      softmax_adj: Float. As categorical clusters each require its own softmax
+      cost function, they quickly outnumber the other variables. Should continuous
+      or binary variables not train well, while softmax error is smoothly decreasing,
+      try using a number less than 1 to scale the loss of the softmaxes down. A
+      useful rule of thumb seems to be 1/(number of softmaxes) to use the averaged
+      softmax loss.
+
+    Returns:
+      Self
+
+
+
+    """
     self.layer_structure = layer_structure
     self.learn_rate = learn_rate
     self.input_drop = input_drop
     self.model_built = False
     self.savepath = savepath
     self.model = None
-    self.query_input = query_input
     self.additional_data = None
     self.train_batch = train_batch
     self.seed = None
+    self.input_is_pipeline = False
+    self.input_pipeline = None
+    self.loss_scale = loss_scale
+    self.init_scale = init_scale
+    self.softmax_adj = softmax_adj
 
 
   def _batch_iter(self,
@@ -124,9 +254,15 @@ class MIDAS(object):
                 unsorted= True,
                 additional_data = None,
                 verbose= True,
-                crossentropy_adj= 1,
-                loss_scale = 1):
+                ):
     """
+    This method is called to construct the neural network that is the heart of
+    MIDAS. This includes the assignment of loss functions to the appropriate
+    data types.
+
+    THIS FUNCTION MUST BE CALLED BEFORE ANY TRAINING OR IMPUTATION OCCURS. Failing
+    to do so will simply raise an error.
+
     The categorical columns should be a list of column names. Softmax columns
     should be a list of lists of column names. This will allow the model to
     dynamically assign cost functions to the correct variables. If, however,
@@ -134,15 +270,47 @@ class MIDAS(object):
     the arguments can be passed in as integers of size, ie. shape[1] attributes
     for each of the relevant categories.
 
-    In other words, pre-sort your data and pass in the integers, so indexing
-    dynamically doesn't become too difficult. Alternatively, list(df.columns.values)
-    will output a list of column names, which can be easily implemented in the
-    'for' loop which constructs your dummy variables.
+    In other words, if you're experienced at using MIDAS and understand how its
+    indexing works, pre-sort your data and pass in the integers so specifying
+    reindexing values doesn't become too onerous.
+
+    Alternatively, list(df.columns.values) will output a list of column names,
+    which can be easily implemented in the 'for' loop which constructs your dummy
+    variables.
+
+    Args:
+      imputation_target: DataFrame. Any data specified here will be rearranged
+      and stored for the subsequent imputation process. The data must be
+      preprocessed before it is passed to build_model.
+
+      categorical_columns: List of names. Specifies the binary (ie. non-exclusive
+      categories) to be imputed. If unsorted = False, this value can be an integer
+
+      softmax_columns: List of lists. Every inner list should contain column names.
+      Each inner list should represent a set of mutually exclusive categories,
+      such as current day of the week. if unsorted = False, this should be a list
+      of integers.
+
+      unsorted: Boolean. Specifies to MIDAS that data has been pre-sorted, and
+      indices can simply be appended to the size index.
+
+      additional_data: DataFrame. Any data that shoud be included in the imputation
+      model, but is not required from the output. By passing data here, the data
+      will neither be rearranged nor will it generate a cost function. This reduces
+      the regularising effects of multiple loss functions, but reduces both network
+      size requirements and training time.
+
+      verbose: Boolean. Set to False to suppress messages printing to terminal.
+
+      Returns:
+        Self
+
     """
     if not isinstance(imputation_target, pd.DataFrame):
       raise TypeError("Input data must be in a DataFrame")
     if imputation_target.isnull().sum().sum() == 0:
-      raise ValueError("Imputation target contains no missing values. Please ensure missing values are encoded as type np.nan")
+      raise ValueError("Imputation target contains no missing values. Please"\
+                       " ensure missing values are encoded as type np.nan")
     self.original_columns = imputation_target.columns
     cont_exists = False
     cat_exists = False
@@ -182,7 +350,8 @@ class MIDAS(object):
 
     #Commit some variables to the instance of the class
     self.size_index = size_index
-    self.na_matrix = imputation_target.notnull().astype(bool)
+    if not self.input_is_pipeline:
+      self.na_matrix = imputation_target.notnull().astype(bool)
     self.imputation_target = imputation_target.fillna(0)
     if additional_data is not None:
       self.additional_data = additional_data.fillna(0)
@@ -213,7 +382,7 @@ class MIDAS(object):
         _w, _b = self._build_variables(weights= _w, biases= _b,
                                        num_in= struc_list[n],
                                        num_out= struc_list[n+1],
-                                       scale= crossentropy_adj)
+                                       scale= self.init_scale)
 
       #Build the neural network. Each layer is determined by the struc list
       def impute(X):
@@ -265,7 +434,7 @@ class MIDAS(object):
 
             output_list.append(tf.nn.softmax(pred_temp))
             cost_list.append(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-                labels= t_t, logits= p_t)))
+                labels= t_t, logits= p_t) * self.softmax_adj))
             self.output_types.append('sacc')
 
         elif n == 1:
@@ -281,7 +450,7 @@ class MIDAS(object):
 
             output_list.append(tf.nn.softmax(pred_temp))
             cost_list.append(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-                labels= t_t, logits= p_t)))
+                labels= t_t, logits= p_t) * self.softmax_adj))
             self.output_types.append('sacc')
         else:
           p_t = tf.reshape(p_t, [-1, size_index[n]])
@@ -289,14 +458,14 @@ class MIDAS(object):
 
           output_list.append(tf.nn.softmax(pred_temp))
           cost_list.append(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-                labels= t_t, logits= p_t)/self.train_batch))
+                labels= t_t, logits= p_t) * self.softmax_adj))
           self.output_types.append('sacc')
 
 
       #loss_agg = tf.reshape(tf.concat(1, cost_list), [-1, len(size_index)])
       self.output_op = tf.concat(output_list, axis= 1)
 
-      self.joint_loss = tf.reduce_sum(cost_list) * loss_scale
+      self.joint_loss = tf.reduce_sum(cost_list) * self.loss_scale
 
       self.train_step = tf.train.AdamOptimizer(self.learn_rate).minimize(self.joint_loss)
       self.init = tf.global_variables_initializer()
@@ -315,11 +484,31 @@ class MIDAS(object):
                   verbosity_ival= 1,
                   excessive= False):
     """
-    This is the standard method for optimising the model's parameters. Must be called
-    before imputation can be performed.
+    This is the standard method for optimising the model's parameters. Must be
+    called before imputation can be performed.
+
+    Args:
+      verbose: Boolean. Prints out messages, including loss
+
+      verbosity_ival: Integer. This number determines the interval between
+      messages.
+
+      excessive: Boolean. Used for troubleshooting, this argument will cause the
+      cost of each batch to be printed to the terminal.
+
+    Returns:
+      Self. Model is automatically saved upon reaching specified number of epochs
+
     """
     if not self.model_built:
-      raise AttributeError("The computation graph must be built before the model can be trained")
+      raise AttributeError("The computation graph must be built before the model"\
+                           " can be trained")
+
+    if self.input_is_pipeline:
+      raise AttributeError("Model was constructed to accept pipeline data, either"\
+                           " use 'train_model_pipeline' method or rebuild model "\
+                           "with in-memory dataset.")
+
     if self.seed is not None:
       np.seed(self.seed)
     feed_data = self.imputation_target.values
@@ -358,8 +547,31 @@ class MIDAS(object):
   def generate_samples(self,
                        m= 50,
                        verbose= True):
+    """
+    Method used to generate a set of m imputations to the .output_list attribute.
+    Imputations are stored within a list in memory, and can be accessed in any
+    order.
+
+    If a model has been pre-trained, on subsequent runs this function can be
+    directly called without having to train first. An 'if' statement checking
+    the default save location is useful for this.
+
+    Args:
+      m: Integer. Number of imputations to generate.
+
+      verbose: Boolean. Prints out messages.
+    Returns:
+      Self
+    """
+
     if not self.model_built:
-      raise AttributeError("The computation graph must be built before the model can be trained")
+      raise AttributeError("The computation graph must be built before the model"\
+                           " can be trained")
+
+    if self.input_is_pipeline:
+      raise AttributeError("Model was constructed to accept pipeline data, either"\
+                           " use 'pipeline_yield_samples' method or rebuild model "\
+                           "with in-memory dataset.")
     self.output_list = []
     with tf.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
@@ -381,8 +593,31 @@ class MIDAS(object):
   def yield_samples(self,
                     m= 50,
                     verbose= True):
+    """
+    Method used to generate a set of m imputations via the 'yield' command, allowing
+    imputations to be used in a 'for' loop'
+
+    If a model has been pre-trained, on subsequent runs this function can be
+    directly called without having to train first. An 'if' statement checking
+    the default save location is useful for this.
+
+    Args:
+      m: Integer. Number of imputations to generate.
+
+      verbose: Boolean. Prints out messages.
+
+    Returns:
+      Self
+    """
+
     if not self.model_built:
-      raise AttributeError("The computation graph must be built before the model can be trained")
+      raise AttributeError("The computation graph must be built before the model"\
+                           " can be trained")
+
+    if self.input_is_pipeline:
+      raise AttributeError("Model was constructed to accept pipeline data, either"\
+                           " use 'pipeline_yield_samples' method or rebuild model "\
+                           "with in-memory dataset.")
     with tf.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
       if verbose:
@@ -405,12 +640,38 @@ class MIDAS(object):
                              b_size= 256,
                              verbose= True):
     """
+    Method used to generate a set of m imputations to the .output_list attribute.
+    Imputations are stored within a list in memory, and can be accessed in any
+    order. As batch generation implies very large datasets, this method is only
+    provided for completeness' sake.
+
     This function is for a dataset large enough to be stored in memory, but
     too large to be passed into the model in its entirety. This may be due to
     GPU memory limitations, or just the size of the model
+
+    If a model has been pre-trained, on subsequent runs this function can be
+    directly called without having to train first. An 'if' statement checking
+    the default save location is useful for this.
+
+    Args:
+      m: Integer. Number of imputations to generate.
+
+      b_size: Integer. Number of data entries to process at once. For managing
+      wider datasets, smaller numbers may be required.
+
+      verbose: Boolean. Prints out messages.
+
+    Returns:
+      Self
     """
     if not self.model_built:
-      raise AttributeError("The computation graph must be built before the model can be trained")
+      raise AttributeError("The computation graph must be built before the model"\
+                           " can be trained")
+
+    if self.input_is_pipeline:
+      raise AttributeError("Model was constructed to accept pipeline data, either"\
+                           " use 'pipeline_yield_samples' method or rebuild model "\
+                           "with in-memory dataset.")
     self.output_list = []
     with tf.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
@@ -440,12 +701,35 @@ class MIDAS(object):
                              b_size= 256,
                              verbose= True):
     """
+    Method used to generate a set of m imputations via the 'yield' command, allowing
+    imputations to be used in a 'for' loop'
+
     This function is for a dataset large enough to be stored in memory, but
     too large to be passed into the model in its entirety. This may be due to
     GPU memory limitations, or just the size of the model
-    """
+
+    If a model has been pre-trained, on subsequent runs this function can be
+    directly called without having to train first. An 'if' statement checking
+    the default save location is useful for this.
+
+    Args:
+      m: Integer. Number of imputations to generate.
+
+      b_size: Integer. Number of data entries to process at once. For managing
+      wider datasets, smaller numbers may be required.
+
+      verbose: Boolean. Prints out messages.
+
+    Returns:
+      Self    """
     if not self.model_built:
-      raise AttributeError("The computation graph must be built before the model can be trained")
+      raise AttributeError("The computation graph must be built before the model"\
+                           " can be trained")
+
+    if self.input_is_pipeline:
+      raise AttributeError("Model was constructed to accept pipeline data, either"\
+                           " use 'pipeline_yield_samples' method or rebuild model "\
+                           "with in-memory dataset.")
     with tf.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
       if verbose:
@@ -474,6 +758,7 @@ class MIDAS(object):
                  training_epochs= 100,
                  report_ival = 10,
                  report_samples = 32,
+                 plot_all= True,
                  verbose= True,
                  verbosity_ival= 1,
                  spike_seed= 42,
@@ -481,7 +766,10 @@ class MIDAS(object):
                  ):
     """
     This function spikes in additional missingness, so that known values can be
-    used to help adjust the complexity of the model.
+    used to help adjust the complexity of the model. As conventional train/
+    validation splits can still lead to autoencoders overtraining, the method for
+    limiting complexity is overimputation and early stopping. This gives an
+    estimate of how the model will react to unseen variables.
 
     Error is defined as RMSE for continuous variables, and classification error
     for binary and categorical variables (ie. 1 - accuracy). Note that this means
@@ -505,14 +793,67 @@ class MIDAS(object):
       .overimpute().
       -The missingness inherent to the data may depend on some unobserved factor.
       In this case, the bias in the observed data may lead to inaccurate inference.
+
+    It is worth visually inspecting the distribution of the overimputed values
+    against imputed values (using plot_all) to ensure that they fall within a
+    sensible range.
+
+    Args:
+      spikein: Float, between 0 and 1. The proportion of total values to remove
+      from the dataset at random. As this is a random selection, the sample should
+      be representative. It should also equally capture known and missing values,
+      therefore this sample represents the percentage of known data to remove.
+      If concerns about sampling remain, adjusting this number or changing the
+      seed can allow for validation. Larger numbers mean greater amounts of removed
+      data, which may mean estimates of optimal training time might be skewed.
+      This can be resolved by lowering the learning rate and aiming for a window.
+
+      training_epochs: Integer. Specifies the number of epochs model should be
+      trained for. It is often worth specifying longer than expected to ensure
+      that the model does not overtrain, or that another, better, optimum exists
+      given slightly longer training time.
+
+      report_ival: Integer. The interval between sampling from the posterior of
+      the model. Smaller intervals mean a more granular view of convergence,
+      but also drastically slow training time.
+
+      report_samples: The number of Monte-Carlo samples drawn for each check of
+      the posterior at report_ival. Greater numbers of samples means a longer
+      runtime for overimputation. For low numbers of samples, the impact will be
+      reduced, though for large numbers of Monte-Carlo samples, report_ival will
+      need to be adjusted accordingly. I recommend a number between 5 and 25,
+      depending on the complexity of the data.
+
+      plot_all: Generates plots of the distribution of spiked in values v. the
+      mean of the imputations. Continuous values have a density plot, categorical
+      values a bar plot representing proportions. Only the mean is plotted at this
+      point for simplicity's sake.
+
+      verbose: Boolean. Prints out messages, including loss
+
+      verbosity_ival: Integer. This number determines the interval between
+      messages.
+
+      spike_seed: A different seed, separate to the one used in the main call,
+      used to initialise the RNG for the missingness spike-in.
+
+      excessive: Unlike .train_model()'s excessive arg, this argument prints the
+      entire batch output to screen. This allows for inspection for unusual values
+      appearing, useful if the model's accuracy will not reduce.
+
     """
+    if not self.model_built:
+      raise AttributeError("The computation graph must be built before the model"\
+                           " can be trained")
+
+    if self.input_is_pipeline:
+      raise AttributeError("Overimputation not currently supported for models"\
+                           " which use a pipeline function for input.")
     #These values simplify control flow used later for error calculation and
     #visualisation of convergence.
     rmse_in = False
     sacc_in = False
     bacc_in = False
-    if not self.model_built:
-      raise AttributeError("The computation graph must be built before the model can be trained")
     if 'rmse' in self.output_types:
       rmse_in = True
     if 'sacc' in self.output_types:
@@ -583,11 +924,15 @@ class MIDAS(object):
           feedin = {self.X: batch[0], self.na_idx: batch[1]}
           if self.additional_data is not None:
             feedin[self.X_add] = batch[2]
-          out, loss, _ = sess.run([self.output_op, self.joint_loss, self.train_step],
-                             feed_dict= feedin)
+
           if excessive:
+            out, loss, _ = sess.run([self.output_op, self.joint_loss, self.train_step],
+                             feed_dict= feedin)
             print("Current cost:", loss)
             print(out)
+          else:
+            loss, _ = sess.run([self.joint_loss, self.train_step],
+                             feed_dict= feedin)
           count +=1
 
           if not np.isnan(loss):
@@ -658,12 +1003,38 @@ class MIDAS(object):
             temp_spike = spike[:,break_list[n]:break_list[n+1]]
             if self.output_types[n] == 'sacc':
               temp_spike = temp_spike[:,0]
+              if plot_all:
+                temp_pred[temp_spike].mean().plot(kind= 'bar', label= 'Predicted values')
+                temp_true[temp_spike].mean().plot(kind= 'bar', alpha= 0.5,
+                         color= 'r', align= 'edge', label= 'Known values')
+                plt.title('Spiked categorical proportion')
+                plt.legend()
+                plt.show()
               agg_sacc += (1 - sacc(temp_true.values, temp_pred.values,
                                    temp_spike)) / n_softmax
             elif self.output_types[n] == 'rmse':
+              if plot_all:
+                for n_rmse in range(len(temp_pred.columns)):
+                  t_p = temp_pred.iloc[:,n_rmse]
+                  t_t = temp_true.iloc[:,n_rmse]
+                  t_s = temp_spike[:,n_rmse]
+                  t_p[t_s].plot(kind= 'density', label= 'Predicted values')
+                  t_t[t_s].plot(kind= 'density', alpha= 0.5, color= 'r', label= 'Known values')
+                  plt.title('Density plot of spiked continuous values: ' + \
+                            temp_pred.columns[n_rmse])
+                  plt.legend()
+                  plt.show()
+
               agg_rmse += np.sqrt(mse(temp_true[temp_spike],
                                          temp_pred[temp_spike]))
             else:
+              if plot_all:
+                temp_pred[temp_spike].mean().plot(kind= 'bar', label= 'Predicted proportions')
+                temp_true[temp_spike].mean().plot(kind= 'bar', alpha= 0.5,
+                         color= 'r', align= 'edge', label= 'Known proportions')
+                plt.title('Spiked binary proportions')
+                plt.legend()
+                plt.show()
               agg_bacc += 1 - bacc(temp_true.values, temp_pred.values, temp_spike)
 
           #Plot losses depending on which loss values present in data
@@ -724,3 +1095,208 @@ class MIDAS(object):
       print("Overimputation complete. Adjust complexity as needed.")
       return self
 
+  def build_model_pipeline(self,
+                           data_sample,
+                           categorical_columns= None,
+                           softmax_columns= None,
+                           unsorted= True,
+                           additional_data_sample= None,
+                           verbose= True,
+                           crossentropy_adj= 1,
+                           loss_scale = 1):
+    """
+    This function is for integration with databasing or any dataset that needs
+    to be batched into memory. The data sample is simply there to allow the
+    original constructor to be recycled. The head of the data should be sufficient
+    to build the imputation model. The input pipeline itself should pre-scale
+    the data, and code null values as type np.nan. The pipeline ought to output
+    a Pandas DataFrame. If additional data will be passed in, then the return must
+    be a list of two DataFrames. The columns of the dataframe will be re-arranged
+    so that error functions are efficiently generated.
+
+    IT IS IMPERITIVE that this ordering is respected. Design the input batching
+    function accordingly.
+
+    The categorical columns should be a list of column names. Softmax columns
+    should be a list of lists of column names. This will allow the model to
+    dynamically assign cost functions to the correct variables. If, however,
+    the data comes pre-sorted, arranged can be set to "true", in which case
+    the arguments can be passed in as integers of size, ie. shape[1] attributes
+    for each of the relevant categories.
+
+    In other words, pre-sort your data and pass in the integers, so indexing
+    dynamically doesn't become too difficult. Alternatively, list(df.columns.values)
+    will output a list of column names, which can be easily implemented in the
+    'for' loop which constructs your dummy variables.
+    """
+    self.input_is_pipeline = True
+    c_c = categorical_columns
+    s_c = softmax_columns
+    us = unsorted
+    a_d = additional_data_sample
+    vb = verbose
+    cea = crossentropy_adj
+    l_s = loss_scale
+
+    self.build_model(data_sample, c_c, s_c, us, a_d, vb, cea, l_s)
+
+    return self
+
+  def train_model_pipeline(self,
+                           input_pipeline,
+                           training_epochs= 100,
+                           verbose= True,
+                           verbosity_ival= 1,
+                           excessive= False):
+    """
+    This is the alternative method for optimising the model's parameters when input
+    data must be batched into memory. Must be called before imputation can be
+    performed. The model will then be saved to the specified directory
+
+    Args:
+      input_pipeline: Function which yields a pre-processed and scaled DataFrame
+      from the designated source, be it a server or large flat file.
+
+      training_epochs: Integer. The number of epochs the model will run for
+
+      verbose: Boolean. Prints out messages, including loss
+
+      verbosity_ival: Integer. This number determines the interval between
+      messages.
+
+      excessive: Boolean. Used for troubleshooting, this argument will cause the
+      cost of each batch to be printed to the terminal.
+
+    Returns:
+      Self. Model is automatically saved upon reaching specified number of epochs
+
+    """
+    self.input_pipeline = input_pipeline
+    if not self.model_built:
+      raise AttributeError("The computation graph must be built before the model"\
+                           " can be trained")
+    if not self.input_is_pipeline:
+      raise AttributeError("Model was constructed to accept locally-stored data,"\
+                           "either use 'train_model' method or rebuild model "\
+                           "with the 'build_model_pipeline' method.")
+
+    if self.seed is not None:
+      np.seed(self.seed)
+    with tf.Session(graph= self.graph) as sess:
+      sess.run(self.init)
+      if verbose:
+        print("Model initialised")
+        print()
+      for epoch in range(training_epochs):
+        count = 0
+        run_loss = 0
+
+        for feed_data in input_pipeline:
+          if self.additional_data is None:
+            if not isinstance(feed_data, pd.DataFrame):
+              raise TypeError("Input data must be in a DataFrame")
+            na_loc = feed_data.notnull().astype(bool).values
+            feedin = {self.X: feed_data.values,
+                      self.na_idx: na_loc}
+          else:
+            if not isinstance(feed_data, list):
+              raise TypeError("Input should be a list of two DataFrames, with "\
+                              "index 0 containing the target imputation data, and"\
+                              " the data at index 1 containing additional data")
+            if len(feed_data) != 2:
+              raise TypeError("Input should be a list of two DataFrames, with "\
+                              "index 0 containing the target imputation data, and"\
+                              " the data at index 1 containing additional data")
+            if not isinstance(feed_data[0], pd.DataFrame):
+              raise TypeError("Input data must be in a DataFrame")
+            if not isinstance(feed_data[1], pd.DataFrame):
+              raise TypeError("Additional data must be in a DataFrame")
+            na_loc = feed_data[0].notnull().astype(bool).values
+            feedin = {self.X: feed_data[0].fillna(0).values,
+                      self.X_add: feed_data[1].fillna(0).values,
+                      self.na_idx: na_loc}
+
+          if np.sum(na_loc) == 0:
+            continue
+          loss, _ = sess.run([self.joint_loss, self.train_step],
+                             feed_dict= feedin)
+          if excessive:
+            print("Current cost:", loss)
+          count +=1
+          if not np.isnan(loss):
+            run_loss += loss
+        if verbose:
+          if epoch % verbosity_ival == 0:
+            print('Epoch:', epoch, ", loss:", str(run_loss/count))
+      if verbose:
+        print("Training complete. Saving file...")
+      save_path = self.saver.save(sess, self.savepath)
+      if verbose:
+        print("Model saved in file: %s" % save_path)
+    return self
+
+  def yield_samples_pipeline(self,
+                             verbose= False):
+    """
+    As its impossible to know the specifics of the pipeline, this method simply
+    cycles through all data provided by the input function. The number of imputations
+    can be specified by the user, depending on their needs.
+
+    Args:
+      verbose: Prints out messages
+
+    Yields:
+      A 'DataFrame' of the size specified by the input function passed to the
+      'train_model_pipeline' method.
+
+    Returns:
+      Self
+
+    """
+    if not self.model_built:
+      raise AttributeError("The computation graph must be built before the model"\
+                           " can be trained")
+    if not self.input_is_pipeline:
+      raise AttributeError("Model was constructed to accept locally-stored data,"\
+                           "either use 'train_model' method or rebuild model "\
+                           "with the 'build_model_pipeline' method.")
+
+    if self.seed is not None:
+      np.seed(self.seed)
+    with tf.Session(graph= self.graph) as sess:
+      self.saver.restore(sess, self.savepath)
+      if verbose:
+        print("Model restored.")
+
+      for feed_data in self.inpinput_pipeline:
+        if self.additional_data is None:
+          if not isinstance(feed_data, pd.DataFrame):
+            raise TypeError("Input data must be in a DataFrame")
+          na_loc = feed_data.notnull().astype(bool).values
+          feedin = {self.X: feed_data.fillna(0).values}
+        else:
+          if not isinstance(feed_data, list):
+            raise TypeError("Input should be a list of two DataFrames, with "\
+                            "index 0 containing the target imputation data, and"\
+                            " the data at index 1 containing additional data")
+          if len(feed_data) != 2:
+            raise TypeError("Input should be a list of two DataFrames, with "\
+                            "index 0 containing the target imputation data, and"\
+                            " the data at index 1 containing additional data")
+          if not isinstance(feed_data[0], pd.DataFrame):
+            raise TypeError("Input data must be in a DataFrame")
+          if not isinstance(feed_data[1], pd.DataFrame):
+            raise TypeError("Additional data must be in a DataFrame")
+          na_loc = feed_data[0].notnull().astype(bool).values
+          feedin = {self.X: feed_data[0].fillna(0).values,
+                    self.X_add: feed_data[1].fillna(0).values}
+          feed_data = feed_data[0]
+        na_loc = feed_data.notnull().astype(bool).values
+
+        y_out = pd.DataFrame(sess.run(self.output_op,feed_dict= feedin),
+                                columns= self.imputation_target.columns)
+        output_df = self.imputation_target.copy()
+        output_df[np.invert(na_loc)] = y_out[np.invert(na_loc)]
+        yield output_df
+
+    return self
