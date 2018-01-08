@@ -20,6 +20,8 @@ Currently, installation via pip/conda is not supported. For this early period, s
 
 
 ALPHA 0.1
+---------
+
 Basic functionality feature-complete. Additional features will be added, but MIDAS is ready for most users. Next release TBD.
 
 
