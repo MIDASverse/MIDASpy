@@ -44,9 +44,9 @@ class MIDAS(object):
   free to experiment.
 
   The general form of a call to MIDAS takes the following form:
-    from MIDAS import MIDAS
+    from midas import Midas
 
-    imputer = MIDAS()
+    imputer = Midas()
     imputer.build_model(data)
     imputer.generate_samples()
     for dataset in imputer.output_list:
