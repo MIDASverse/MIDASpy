@@ -2,6 +2,8 @@
 
 Model construction first requires an instantiation of MIDAS. The model then needs to be constructed and trained before imputations can be generated. Calibration is optional, but strongly recommeded.
 
+This class doesn't explicitly return values. Values are either stored internally, files are saved remotely or methods yield rather than returning. The key attribute is .output_list when samples are generated.
+
 #### Instantiation:
 
 - Midas()
@@ -32,15 +34,15 @@ Model construction first requires an instantiation of MIDAS. The model then need
 
 ### Midas()
 
-layer_structure= [256, 256, 256]
-learn_rate= 1e-4
-input_drop= 0.8
-train_batch = 16
-savepath= 'tmp/MIDAS'
-seed= None
-loss_scale= 1
-init_scale= 1
-softmax_adj= 1
+- layer_structure= \[256, 256, 256\]
+- learn_rate= 1e-4
+- input_drop= 0.8
+- train_batch = 16
+- savepath= 'tmp/MIDAS'
+- seed= None
+- loss_scale= 1
+- init_scale= 1
+- softmax_adj= 1
 
 Initialiser. Called separately to 'build_model' to allow for out-of-memory datasets. All key hyperparameters are entered at this stage, as the model construction methods only deal with the dataset.
 
@@ -67,12 +69,12 @@ Initialiser. Called separately to 'build_model' to allow for out-of-memory datas
 
 ### .build_model()
 
-imputation_target
-categorical_columns= None
-softmax_columns= None
-unsorted= True
-additional_data = None
-verbose= True
+- imputation_target
+- categorical_columns= None
+- softmax_columns= None
+- unsorted= True
+- additional_data = None
+- verbose= True
 
 This method is called to construct the neural network that is the heart of MIDAS. This includes the assignment of loss functions to the appropriate data types.
 
@@ -101,14 +103,14 @@ Alternatively, list(df.columns.values) will output a list of column names, which
 
 ### .build_model_pipeline()
 
-data_sample
-categorical_columns= None
-softmax_columns= None
-unsorted= True
-additional_data_sample= None
-verbose= True
-crossentropy_adj= 1
-loss_scale = 1
+- data_sample
+- categorical_columns= None
+- softmax_columns= None
+- unsorted= True
+- additional_data_sample= None
+- verbose= True
+- crossentropy_adj= 1
+- loss_scale = 1
 
 This function is for integration with databasing or any dataset that needs to be batched into memory. The data sample is simply there to allow the original constructor to be recycled. The head of the data should be sufficient to build the imputation model. The input pipeline itself should pre-scale the data, and code null values as type np.nan. The pipeline ought to output a Pandas DataFrame. If additional data will be passed in, then the return must be a list of two DataFrames. The columns of the dataframe will be re-arranged so that error functions are efficiently generated.
 
@@ -135,15 +137,15 @@ In other words, pre-sort your data and pass in the integers, so indexing dynamic
 
 ### .overimpute()
 
-spikein = 0.1
-training_epochs= 100
-report_ival = 10
-report_samples = 32
-plot_all= True
-verbose= True
-verbosity_ival= 1
-spike_seed= 42
-excessive= False
+- spikein = 0.1
+- training_epochs= 100
+- report_ival = 10
+- report_samples = 32
+- plot_all= True
+- verbose= True
+- verbosity_ival= 1
+- spike_seed= 42
+- excessive= False
 
 This function spikes in additional missingness, so that known values can be used to help adjust the complexity of the model. As conventional train/validation splits can still lead to autoencoders overtraining, the method for limiting complexity is overimputation and early stopping. This gives an estimate of how the model will react to unseen variables.
 
@@ -179,4 +181,134 @@ It is worth visually inspecting the distribution of the overimputed values again
 - **excessive:** Unlike .train_model()'s excessive arg, this argument prints the entire batch output to screen. This allows for inspection for unusual values appearing, useful if the model's accuracy will not reduce.
 
 ---
+
+### .train_model()
+
+- training_epochs= 100
+- verbose= True
+- verbosity_ival= 1
+- excessive= False
+                  
+This is the standard method for optimising the model's parameters. Must be called before imputation can be performed. The model is automatically saved upon conclusion of training
+
+#### Args:
+
+- **training_epochs:** Integer. Number of complete cycles through training dataset.
+
+- **verbose:** Boolean. Prints out messages, including loss
+
+- **verbosity_ival:** Integer. This number determines the interval between messages.
+
+- **excessive:** Boolean. Used for troubleshooting, this argument will cause the cost of each minibatch to be printed to the terminal.
+
+---
+
+### .train_model_pipeline()
+
+- input_pipeline
+- training_epochs= 100
+- verbose= True
+- verbosity_ival= 1
+- excessive= False
+
+This is the alternative method for optimising the model's parameters when input data must be batched into memory. Must be called before imputation can be performed. The model will then be saved to the specified directory.
+
+#### Args:
+      
+- **input_pipeline:** Function which yields a pre-processed and scaled DataFrame from the designated source, be it a server or large flat file.
+
+- **training_epochs:** Integer. The number of epochs the model will run for
+
+- **verbose:** Boolean. Prints out messages, including loss
+
+- **verbosity_ival:** Integer. This number determines the interval between messages.
+
+- **excessive:** Boolean. Used for troubleshooting, this argument will cause the cost of each minibatch to be printed to the terminal.
+
+----
+
+### .batch_generate_samples()
+
+- m= 50
+- b_size= 256
+- verbose= True
+ 
+Method used to generate a set of m imputations to the .output_list attribute. Imputations are stored within a list in memory, and can be accessed in any order. As batch generation implies very large datasets, this method is only provided for internal troubleshooting.
+
+This function is for a dataset large enough to be stored in memory, but too large to be passed into the model in its entirety. This may be due to GPU memory limitations, or just the size of the model
+
+If a model has been pre-trained, on subsequent runs this function can be directly called without having to train first. An 'if' statement checking the default save location is useful for this.
+
+#### Args:
+- **m:** Integer. Number of imputations to generate.
+
+- **b_size:** Integer. Number of data entries to process at once. For managing wider datasets, smaller numbers may be required.
+
+- **verbose:** Boolean. Prints out messages.
+
+---
+
+### .batch_yield_samples()
+
+- m= 50
+- b_size= 256
+- verbose= True
+
+Method used to generate a set of m imputations via the 'yield' command, allowing imputations to be used in a 'for' loop'
+
+This function is for a dataset large enough to be stored in memory, but too large to be passed into the model in its entirety. This may be due to GPU memory limitations, or just the size of the model or dataset.
+
+If a model has been pre-trained, on subsequent runs this function can be directly called without having to train first. An 'if' statement checking the default save location is useful for this.
+
+#### Args:
+- **m:** Integer. Number of imputations to generate.
+
+- **b_size:** Integer. Number of data entries to process at once. For managing wider datasets, smaller numbers may be required.
+
+- **verbose:** Boolean. Prints out messages.
+
+---
+
+### .generate_samples()
+
+m= 50
+verbose= True
+
+Method used to generate a set of m imputations to the .output_list attribute. Imputations are stored within a list in memory, and can be accessed in any order.
+
+If a model has been pre-trained, on subsequent runs this function can be directly called without having to train first. An 'if' statement checking the default save location is useful for this.
+
+#### Args:
+- **m:** Integer. Number of imputations to generate.
+
+- **verbose:** Boolean. Prints out messages.
+
+---
+
+### .yield_samples()
+
+- m= 50
+- verbose= True
+
+Method used to generate a set of m imputations via the 'yield' command, allowing imputations to be used in a 'for' loop.
+
+If a model has been pre-trained, on subsequent runs this function can be directly called without having to train first. An 'if' statement checking the default save location is useful for this.
+
+#### Args:
+
+- **m:** Integer. Number of imputations to generate.
+
+- **verbose:** Boolean. Prints out messages.
+
+---
+
+### .yield_samples_pipeline()
+
+verbose= False
+
+As its impossible to know the specifics of the pipeline, this method simply cycles through all data provided by the input function. The number of imputations can be specified by the user, depending on their needs. The size of the output DataFrame depends on the size specified by the input function that was passed to 'train_model_pipeline'.
+
+#### Args:
+
+- **verbose: Prints out messages
 
