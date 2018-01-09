@@ -271,8 +271,8 @@ If a model has been pre-trained, on subsequent runs this function can be directl
 
 ### .generate_samples()
 
-m= 50
-verbose= True
+- m= 50
+- verbose= True
 
 Method used to generate a set of m imputations to the .output_list attribute. Imputations are stored within a list in memory, and can be accessed in any order.
 
@@ -304,7 +304,7 @@ If a model has been pre-trained, on subsequent runs this function can be directl
 
 ### .yield_samples_pipeline()
 
-verbose= False
+- verbose= False
 
 As its impossible to know the specifics of the pipeline, this method simply cycles through all data provided by the input function. The number of imputations can be specified by the user, depending on their needs. The size of the output DataFrame depends on the size specified by the input function that was passed to 'train_model_pipeline'.
 
