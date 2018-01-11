@@ -43,7 +43,4 @@ Wish list:
 - Informative priors?
 
 
-# A brief disclaimer:
-
-This project is developed essentially as a learning process. I have no formal coding training, so this has been quite the learning curve. By which of course I mean I was flying by the seat of my pants, essentially learning by solving problems. This is not to forestall criticism, but rather to invite it. Should you stumble across it, please feel free to contribute or highlight areas that need improvement. I know I have probably commited some egregious coding sins (for loops!), but my nonexistent coding education means I simply did the best I could with the tools I had. The better this algorithm is, the more the scholarly/data science community stands to benefit - which is the ultimate goal. Therefore, the more criticism and advice, the better.
 
