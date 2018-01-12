@@ -38,6 +38,7 @@ Planned features:
 - Dropout scaling
 - A modified constructor that can generate embeddings for better interpolation of features
 - R support
+
 Wish list:
 - Smoothing for time series (LOESS?)
 - Informative priors?
