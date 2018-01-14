@@ -364,10 +364,10 @@ class MIDAS(object):
         tf.set_random_seed(self.seed)
 
       #Placeholders
-      self.X = tf.placeholder('float', [None, in_size])
+      self.X = tf.placeholder(tf.float32, [None, in_size])
       self.na_idx = tf.placeholder(tf.bool, [None, in_size])
       if additional_data is not None:
-        self.X_add = tf.placeholder('float', [None, add_size])
+        self.X_add = tf.placeholder(tf.float32, [None, add_size])
 
       #Build list for determining input and output structures
       struc_list = self.layer_structure.copy()
