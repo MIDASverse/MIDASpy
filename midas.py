@@ -1,5 +1,4 @@
 
-# Copyright 2017 Alex Stenlake and Ranjit Lall. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +20,7 @@ import tensorflow as tf
 from sklearn.metrics import mean_squared_error as mse
 
 class MIDAS(object):
+class Midas(object):
   """
   Welcome, and thank you for downloading your new script! Thank you for choosing
   MIDAS, the missing data solution of the present - today!
@@ -44,9 +44,7 @@ class MIDAS(object):
   free to experiment.
 
   The general form of a call to MIDAS takes the following form:
-    from midas import Midas
 
-    imputer = Midas()
     imputer.build_model(data)
     imputer.generate_samples()
     for dataset in imputer.output_list:
@@ -353,6 +351,7 @@ class MIDAS(object):
     if not self.input_is_pipeline:
       self.na_matrix = imputation_target.notnull().astype(bool)
     self.imputation_target = imputation_target.fillna(0)
+    self.imputation_target = imputation_target.fillna(0).astype(np.float32)
     if additional_data is not None:
       self.additional_data = additional_data.fillna(0)
 
@@ -365,9 +364,11 @@ class MIDAS(object):
 
       #Placeholders
       self.X = tf.placeholder('float', [None, in_size])
+      self.X = tf.placeholder(tf.float32, [None, in_size])
       self.na_idx = tf.placeholder(tf.bool, [None, in_size])
       if additional_data is not None:
         self.X_add = tf.placeholder('float', [None, add_size])
+        self.X_add = tf.placeholder(tf.float32, [None, add_size])
 
       #Build list for determining input and output structures
       struc_list = self.layer_structure.copy()
@@ -435,6 +436,10 @@ class MIDAS(object):
             output_list.append(tf.nn.softmax(pred_temp))
             cost_list.append(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
                 labels= t_t, logits= p_t) * self.softmax_adj))
+            cost_list.append(tf.cond(tf.size(t_t) >0,
+                                     lambda: tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels= t_t, logits= p_t)),
+                                     lambda: tf.constant(0.0))
+              )
             self.output_types.append('sacc')
 
         elif n == 1:
@@ -451,6 +456,10 @@ class MIDAS(object):
             output_list.append(tf.nn.softmax(pred_temp))
             cost_list.append(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
                 labels= t_t, logits= p_t) * self.softmax_adj))
+            cost_list.append(tf.cond(tf.size(t_t) >0,
+                                     lambda: tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels= t_t, logits= p_t)),
+                                     lambda: tf.constant(0.0))
+              )
             self.output_types.append('sacc')
         else:
           p_t = tf.reshape(p_t, [-1, size_index[n]])
@@ -459,6 +468,10 @@ class MIDAS(object):
           output_list.append(tf.nn.softmax(pred_temp))
           cost_list.append(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
                 labels= t_t, logits= p_t) * self.softmax_adj))
+          cost_list.append(tf.cond(tf.size(t_t) >0,
+                                     lambda: tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels= t_t, logits= p_t)),
+                                     lambda: tf.constant(0.0))
+              )
           self.output_types.append('sacc')
 
 
@@ -488,6 +501,8 @@ class MIDAS(object):
     called before imputation can be performed.
 
     Args:
+      training_epochs: Integer. Number of cycles through complete dataset.
+
       verbose: Boolean. Prints out messages, including loss
 
       verbosity_ival: Integer. This number determines the interval between
@@ -588,6 +603,7 @@ class MIDAS(object):
         output_df = self.imputation_target.copy()
         output_df[np.invert(self.na_matrix.values)] = y_out[np.invert(self.na_matrix.values)]
         self.output_list.append(output_df)
+        self.output_list.append(output_df.astype(np.float32))
     return self
 
   def yield_samples(self,
@@ -633,6 +649,7 @@ class MIDAS(object):
         output_df = self.imputation_target.copy()
         output_df[np.invert(self.na_matrix.values)] = y_out[np.invert(self.na_matrix.values)]
         yield output_df
+        yield output_df.astype(np.float32)
     return self
 
   def batch_generate_samples(self,
@@ -694,6 +711,7 @@ class MIDAS(object):
         output_df = self.imputation_target.copy()
         output_df[np.invert(self.na_matrix.values)] = y_out[np.invert(self.na_matrix.values)]
         self.output_list.append(output_df)
+        self.output_list.append(output_df.astype(np.float32))
     return self
 
   def batch_yield_samples(self,
@@ -751,6 +769,7 @@ class MIDAS(object):
         output_df = self.imputation_target.copy()
         output_df[np.invert(self.na_matrix.values)] = y_out[np.invert(self.na_matrix.values)]
         yield output_df
+        yield output_df.astype(np.float32)
     return self
 
   def overimpute(self,
@@ -966,18 +985,20 @@ class MIDAS(object):
               minibatch_list.append(y_batch)
             y_out = pd.DataFrame(pd.concat(minibatch_list, ignore_index= True),
                                  columns= self.imputation_target.columns)
-
             #Calculate individual imputation losses
             for n in range(len(self.size_index)):
               temp_pred = y_out.iloc[:,break_list[n]:break_list[n+1]]
               temp_true = self.imputation_target.iloc[:,break_list[n]:break_list[n+1]]
               temp_spike = spike[:,break_list[n]:break_list[n+1]]
+              
               if self.output_types[n] == 'sacc':
                 temp_spike = temp_spike[:,0]
                 single_sacc += (1 - sacc(temp_true.values,
                                          temp_pred.values, temp_spike)) / n_softmax
 
               elif self.output_types[n] == 'rmse':
+                if np.size(temp_true[temp_spike]) == 0:
+                  continue
                 single_rmse += np.sqrt(mse(temp_true[temp_spike],
                                            temp_pred[temp_spike]))
               else:
@@ -1300,3 +1321,5 @@ class MIDAS(object):
         yield output_df
 
     return self
+
+
