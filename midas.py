@@ -21,6 +21,7 @@ import tensorflow as tf
 from sklearn.metrics import mean_squared_error as mse
 
 class MIDAS(object):
+class Midas(object):
   """
   Welcome, and thank you for downloading your new script! Thank you for choosing
   MIDAS, the missing data solution of the present - today!
@@ -44,9 +45,7 @@ class MIDAS(object):
   free to experiment.
 
   The general form of a call to MIDAS takes the following form:
-    from midas import Midas
 
-    imputer = Midas()
     imputer.build_model(data)
     imputer.generate_samples()
     for dataset in imputer.output_list:
@@ -488,6 +487,7 @@ class MIDAS(object):
     called before imputation can be performed.
 
     Args:
+      training_epochs: Integer. Number of cycles through complete dataset.
       verbose: Boolean. Prints out messages, including loss
 
       verbosity_ival: Integer. This number determines the interval between
@@ -1300,3 +1300,5 @@ class MIDAS(object):
         yield output_df
 
     return self
+
+
