@@ -51,7 +51,7 @@ class Midas(object):
     for dataset in imputer.output_list:
       print(dataset)
 
-  Of course, the specifics of how the data is generated and accessed depends on
+  Of course, the specifics of how the data are generated and accessed depends on
   the intended application.
 
   Feedback, contributions and criticism equally welcomed.
