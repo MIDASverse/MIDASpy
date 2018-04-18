@@ -23,7 +23,7 @@ from sklearn.metrics import mean_squared_error as mse
 class MIDAS(object):
 class Midas(object):
   """
-  Welcome, and thank you for downloading your new script! Thank you for choosing
+  Welcome, and thank you for downloading your new script. Thank you for choosing
   MIDAS, the missing-data solution of the present - today!
 
   Japes aside, a few points to note.
