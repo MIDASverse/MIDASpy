@@ -54,14 +54,7 @@ class Midas(object):
   Of course, the specifics of how the data is generated and accessed depends on
   the intended application.
 
-  Very little of the tech and research behind this project is my own work. Most
-  of it is based on Larochelle's work on denoising autoencoders, Gal's work on
-  Bayesian dropout and the combined questions/answers of the internet's data
-  science community. I'm just the guy who put it together and made it work. Full
-  credit goes to all those people whose ideas kept me up at 2am, coding.
-
-  This is my first programming project. Feedback, contributions and criticism
-  equally welcomed.
+  Feedback, contributions and criticism equally welcomed.
 
   https://github.com/Oracen/MIDAS
   """
