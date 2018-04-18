@@ -27,7 +27,7 @@ Basic functionality feature-complete. Additional features will be added, but MID
 Current features:
 - Support for mixed categorical and continuous data types
 - An "additional data" pipeline, allowing data which may be relevant to the imputation to be included, without being included in error generating statistics
-- Simplified calibration for model complexity through the "overimputation" function, including visualisation of reconstructed features
+- Simplified calibration for model complexity through the "overimputation" function, including visualization of reconstructed features
 - Basic large dataset functionality
  
 Planned features:
