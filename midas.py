@@ -1,5 +1,5 @@
 
-# Copyright 2017 Alex Stenlake and Ranjit Lall. All Rights Reserved.
+# Copyright 2018 Alex Stenlake and Ranjit Lall. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ class Midas(object):
 
   For now, all input must take the form of a Pandas DataFrame. Pandas is the only
   library with the kind of flexible indexing that I required. While it might not
-  be as fast as a pure Numpy based solution, it is still quite fast - and allows
+  be as fast as a pure Numpy-based solution, it is still quite fast - and allows
   for mask-based indexing and reindexing.
 
   All categorical variables have to be converted to onehot before the algorithm
