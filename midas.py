@@ -20,7 +20,6 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.metrics import mean_squared_error as mse
 
-class MIDAS(object):
 class Midas(object):
   """
   Welcome, and thank you for downloading your new script! Thank you for choosing
@@ -68,7 +67,11 @@ class Midas(object):
                seed= None,
                loss_scale= 1,
                init_scale= 1,
-               softmax_adj= 1,
+               output_structure= [32, 32, 64],
+               individual_outputs= False,
+               cont_adj= 1.0,
+               binary_adj= 1.0,
+               softmax_adj= 1.0
                ):
     """
     Initialiser. Called separately to 'build_model' to allow for out-of-memory
@@ -159,8 +162,20 @@ class Midas(object):
     self.input_pipeline = None
     self.loss_scale = loss_scale
     self.init_scale = init_scale
-    self.softmax_adj = softmax_adj
 
+    self.individual_outputs = individual_outputs
+    
+    if type(output_structure) == int:
+      self.output_structure = [output_structure]*3
+    elif (individual_outputs == True) | (len(output_structure) ==3):
+      self.output_structure = output_structure
+    else:
+      raise TypeError("The output transform assignment must take the form of "\
+                      "an integer, a list of three elements (cont, bin, cat), "\
+                      "or individual values must be specified.")
+    self.cont_adj = cont_adj
+    self.binary_adj = binary_adj
+    self.softmax_adj = softmax_adj
 
   def _batch_iter(self,
                   train_data,
@@ -238,6 +253,8 @@ class Midas(object):
     data_0 = data.drop(subset, axis= 1)
     chunk = data_1.shape[1]
     return pd.concat([data_0, data_1], axis= 1), chunk
+  
+
 
   def build_model(self,
                 imputation_target,
@@ -364,17 +381,66 @@ class Midas(object):
       #Build list for determining input and output structures
       struc_list = self.layer_structure.copy()
       struc_list.insert(0, in_size + add_size)
-      struc_list.append(in_size)
+      outputs_struc = []
+      for n in range(len(size_index)):
+        if n == 0:
+          if cont_exists:
+            outputs_struc += ["cont"]*size_index[n]
+          elif cat_exists:
+            outputs_struc += ["bin"]*size_index[n]
 
+          else:
+            outputs_struc += size_index[n]
+
+        elif n == 1:
+          if cont_exists and cat_exists:
+            outputs_struc += ["bin"]*size_index[n]
+
+          else:
+            outputs_struc += size_index[n]
+        else:
+          outputs_struc += size_index[n]
+      
+      if self.individual_outputs == True:
+        output_layer_size = np.sum(self.output_structure)
+        output_layer_structure = self.output_structure
+      else:
+        output_layer_structure = []
+        for item in outputs_struc:
+          if item == "cont":
+            output_layer_structure.append(self.output_structure[0])
+          if item == "bin":
+            output_layer_structure.append(self.output_structure[1])
+          if type(item) == int:
+            output_layer_structure.append(self.output_structure[2])
+          output_layer_size = np.sum(output_layer_structure)
+      struc_list.append(output_layer_size)
+      
       #Instantiate and initialise variables
       _w = []
       _b = []
-
+      _ow = []
+      _ob = []
       for n in range(len(struc_list) -1):
         _w, _b = self._build_variables(weights= _w, biases= _b,
                                        num_in= struc_list[n],
                                        num_out= struc_list[n+1],
                                        scale= self.init_scale)
+      assert len(output_layer_structure) == len(outputs_struc)
+      output_split = []
+      for n in range(len(outputs_struc)):
+        if type(outputs_struc[n]) == str:
+          _ow, _ob = self._build_variables(weights= _ow, biases= _ob,
+                                           num_in= output_layer_structure[n],
+                                           num_out= 1,
+                                           scale= self.init_scale)
+          output_split.append(1)
+        elif type(outputs_struc[n]) == int:
+          _ow, _ob = self._build_variables(weights= _ow, biases= _ob,
+                                           num_in= output_layer_structure[n],
+                                           num_out= outputs_struc[n],
+                                           scale= self.init_scale)
+          output_split.append(outputs_struc(n))
 
       #Build the neural network. Each layer is determined by the struc list
       def impute(X):
@@ -383,81 +449,62 @@ class Midas(object):
             X = self._build_layer(X, _w[n], _b[n],
                                   dropout_rate = self.input_drop)
           elif (n+1) == (len(struc_list) -1):
-            X = self._build_layer(X, _w[n], _b[n],
-                                  output_layer = True)
+            X = self._build_layer(X, _w[n], _b[n])
           else:
             X = self._build_layer(X, _w[n], _b[n])
-        return X
+        base_splits = tf.split(X, output_layer_structure, axis=1)
+        recombined = []
+        for n in range(len(outputs_struc)):
+          recombined.append(self._build_layer(base_splits[n], _ow[n], _ob[n],
+                                              output_layer=True))
+        return recombined
 
       #Determine which imputation function is to be used. This is constructed to
       #take advantage of additional data provided.
       if additional_data is not None:
-        self.impute = impute(tf.concat([self.X, self.X_add], axis= 1))
+        pred_split = impute(tf.concat([self.X, self.X_add], axis= 1))
       else:
-        self.impute = impute(self.X)
+        pred_split = impute(self.X)
 
       #Output functions
       output_list = []
       cost_list = []
       self.output_types = []
-
-      for n in range(len(size_index)):
-        na_temp = tf.split(self.na_idx, size_index, axis= 1)[n]
-        pred_temp = tf.split(self.impute, size_index, axis= 1)[n]
-        true_temp = tf.split(self.X, size_index, axis= 1)[n]
-        p_t = tf.boolean_mask(pred_temp, na_temp)
-        t_t = tf.boolean_mask(true_temp, na_temp)
-        #This control flow breaks down the various input data based on the columns
-        #passed to
-        if n == 0:
-          if cont_exists:
-            output_list.append(pred_temp)
-            cost_list.append(tf.reduce_mean(tf.squared_difference(t_t, p_t)))
+      
+      #Assign cost and loss functions
+      na_split = tf.split(self.na_idx, output_split, axis=1)
+      true_split = tf.split(self.X, output_split, axis=1)
+      
+      for n in range(len(outputs_struc)):
+        if outputs_struc[n] == 'cont':
+          if 'rmse' not in self.output_types:
             self.output_types.append('rmse')
-          elif cat_exists:
-            output_list.append(tf.nn.sigmoid(pred_temp))
-            cost_list.append(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-                labels= t_t, logits= p_t)))
+          output_list.append(pred_split[n])
+          cost_list.append(
+              tf.losses.mean_squared_error(tf.boolean_mask(pred_split[n], na_split[n]),
+                                           tf.boolean_mask(true_split[n], na_split[n])\
+                                           *self.cont_adj))
+        elif outputs_struc[n] == 'bin':
+          if 'bacc' not in self.output_types:
             self.output_types.append('bacc')
-
-          else:
-            p_t = tf.reshape(p_t, [-1, size_index[n]])
-            t_t = tf.reshape(t_t, [-1, size_index[n]])
-
-            output_list.append(tf.nn.softmax(pred_temp))
-            cost_list.append(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-                labels= t_t, logits= p_t) * self.softmax_adj))
+          output_list.append(tf.nn.sigmoid(pred_split[n]))
+          cost_list.append(
+              tf.losses.sigmoid_cross_entropy(tf.boolean_mask(pred_split[n], na_split[n]),
+                                              tf.boolean_mask(true_split[n], na_split[n]))\
+              *self.binary_adj)
+        elif type(outputs_struc[n]) == int:
+          if 'sacc' not in self.output_types:
             self.output_types.append('sacc')
-
-        elif n == 1:
-          if cont_exists and cat_exists:
-            output_list.append(tf.sigmoid(pred_temp))
-            cost_list.append(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-                labels= t_t, logits= p_t)))
-            self.output_types.append('bacc')
-
-          else:
-            p_t = tf.reshape(p_t, [-1, size_index[n]])
-            t_t = tf.reshape(t_t, [-1, size_index[n]])
-
-            output_list.append(tf.nn.softmax(pred_temp))
-            cost_list.append(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-                labels= t_t, logits= p_t) * self.softmax_adj))
-            self.output_types.append('sacc')
-        else:
-          p_t = tf.reshape(p_t, [-1, size_index[n]])
-          t_t = tf.reshape(t_t, [-1, size_index[n]])
-
-          output_list.append(tf.nn.softmax(pred_temp))
-          cost_list.append(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-                labels= t_t, logits= p_t) * self.softmax_adj))
-          self.output_types.append('sacc')
-
+          output_list.append(tf.nn.softmax(pred_split[n]))
+          cost_list.append(tf.losses.softmax_cross_entropy(
+              tf.reshape(tf.boolean_mask(pred_split[n], na_split[n]), [-1, outputs_struc[n]]),
+              tf.reshape(tf.boolean_mask(true_split[n], na_split[n]), [-1, outputs_struc[n]])\
+              *self.softmax_adj))
 
       #loss_agg = tf.reshape(tf.concat(1, cost_list), [-1, len(size_index)])
       self.output_op = tf.concat(output_list, axis= 1)
 
-      self.joint_loss = tf.reduce_sum(cost_list) * self.loss_scale
+      self.joint_loss = tf.reduce_mean(cost_list)
 
       self.train_step = tf.train.AdamOptimizer(self.learn_rate).minimize(self.joint_loss)
       self.init = tf.global_variables_initializer()
