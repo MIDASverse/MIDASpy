@@ -69,9 +69,13 @@ class Midas(object):
                init_scale= 1,
                output_structure= [32, 32, 64],
                individual_outputs= False,
+               latent_space_size = 16,
                cont_adj= 1.0,
                binary_adj= 1.0,
-               softmax_adj= 1.0
+               softmax_adj= 1.0,
+               dropout_level = 0.5,
+               weight_decay = 'default',
+               vae_alpha = 1.0
                ):
     """
     Initialiser. Called separately to 'build_model' to allow for out-of-memory
@@ -162,9 +166,19 @@ class Midas(object):
     self.input_pipeline = None
     self.loss_scale = loss_scale
     self.init_scale = init_scale
-
     self.individual_outputs = individual_outputs
-    
+    self.latent_space_size = latent_space_size
+    self.dropout_level = dropout_level
+    self.prior_strength = vae_alpha
+    if weight_decay == 'default':
+      self.weight_decay = 'default'
+    elif type(weight_decay) == float:
+      self.weight_decay = weight_decay
+    else:
+      raise ValueError("Weight decay argument accepts either 'standard' (string) "\
+                       "or floating point")
+
+
     if type(output_structure) == int:
       self.output_structure = [output_structure]*3
     elif (individual_outputs == True) | (len(output_structure) ==3):
@@ -213,7 +227,7 @@ class Midas(object):
                    X,
                    weight_matrix,
                    bias_vec,
-                   dropout_rate= 0.5,
+                   dropout_rate = 0.5,
                    output_layer= False):
     """
     Constructs layers for the build function
@@ -253,7 +267,7 @@ class Midas(object):
     data_0 = data.drop(subset, axis= 1)
     chunk = data_1.shape[1]
     return pd.concat([data_0, data_1], axis= 1), chunk
-  
+
 
 
   def build_model(self,
@@ -400,7 +414,7 @@ class Midas(object):
             outputs_struc += size_index[n]
         else:
           outputs_struc += size_index[n]
-      
+
       if self.individual_outputs == True:
         output_layer_size = np.sum(self.output_structure)
         output_layer_structure = self.output_structure
@@ -414,18 +428,35 @@ class Midas(object):
           if type(item) == int:
             output_layer_structure.append(self.output_structure[2])
           output_layer_size = np.sum(output_layer_structure)
-      struc_list.append(output_layer_size)
-      
+
       #Instantiate and initialise variables
       _w = []
       _b = []
+      _zw = []
+      _zb = []
       _ow = []
       _ob = []
+
+      #Input, denoising
       for n in range(len(struc_list) -1):
         _w, _b = self._build_variables(weights= _w, biases= _b,
                                        num_in= struc_list[n],
                                        num_out= struc_list[n+1],
                                        scale= self.init_scale)
+      #Latent state, variance
+      _zw, _wb = self._build_variables(weights= _zw, biases= _zb,
+                                       num_in= struc_list[-1],
+                                       num_out= self.latent_space_size*2,
+                                       scale= self.init_scale)
+      _zw, _wb = self._build_variables(weights= _zw, biases= _zb,
+                                       num_in= self.latent_space_size,
+                                       num_out= struc_list[-1],
+                                       scale= self.init_scale)
+      _zw, _wb = self._build_variables(weights= _zw, biases= _zb,
+                                       num_in= struc_list[-1],
+                                       num_out= output_layer_size,
+                                       scale= self.init_scale)
+      #Output, specialisation
       assert len(output_layer_structure) == len(outputs_struc)
       output_split = []
       for n in range(len(outputs_struc)):
@@ -442,39 +473,87 @@ class Midas(object):
                                            scale= self.init_scale)
           output_split.append(outputs_struc(n))
 
+
       #Build the neural network. Each layer is determined by the struc list
-      def impute(X):
+      def denoise(X):
         for n in range(len(struc_list) -1):
+          #Input tx
           if n == 0:
             X = self._build_layer(X, _w[n], _b[n],
                                   dropout_rate = self.input_drop)
-          elif (n+1) == (len(struc_list) -1):
-            X = self._build_layer(X, _w[n], _b[n])
           else:
-            X = self._build_layer(X, _w[n], _b[n])
+            X = self._build_layer(X, _w[n], _b[n],
+                                  dropout_rate = self.dropout_level)
+        return X
+
+      def to_z(X):
+        #Latent tx
+        X = self._build_layer(X, _zw[0], _zb[0], dropout_rate = self.dropout_level,
+                                 output_layer= True)
+        x_mu, x_log_sigma = tf.split(X, [self.latent_space_size]*2, axis=1)
+        return x_mu, x_log_sigma
+
+      def sample_latent(x_mu, x_log_sigma):
+        latent_z = tf.random_normal(tf.shape(x_mu))
+        return x_mu + latent_z * tf.exp(x_log_sigma)
+
+      def from_z(X):
+        X = self._build_layer(X, _zw[1], _zb[1], dropout_rate= 1)
+        X = self._build_layer(X, _zw[2], _zb[2], dropout_rate= self.dropout_level)
+
+        #Output tx
         base_splits = tf.split(X, output_layer_structure, axis=1)
         recombined = []
         for n in range(len(outputs_struc)):
           recombined.append(self._build_layer(base_splits[n], _ow[n], _ob[n],
+                                              dropout_rate = self.dropout_level,
                                               output_layer=True))
         return recombined
+
+      def encode(X):
+        X = denoise(X)
+        x_mu, x_log_sigma = to_z(X)
+        kld = tf.maximum(tf.reduce_mean(1 + 2*x_log_sigma*x_mu**2 - tf.exp(2-x_log_sigma),
+                                       axis=1)*self.prior_strength * - 0.5, 0)
+        return x_mu, x_log_sigma, kld
+
+
+      def impute(x_mu, x_log_sigma):
+        z = sample_latent(x_mu, x_log_sigma)
+        X = from_z(z)
+        return X
+
+
 
       #Determine which imputation function is to be used. This is constructed to
       #take advantage of additional data provided.
       if additional_data is not None:
-        pred_split = impute(tf.concat([self.X, self.X_add], axis= 1))
+        x_mu, x_log_sigma, kld = encode(tf.concat([self.X, self.X_add], axis= 1))
       else:
-        pred_split = impute(self.X)
-
+        x_mu, x_log_sigma, kld = encode(self.X)
+      pred_split = impute(x_mu, x_log_sigma)
       #Output functions
       output_list = []
       cost_list = []
       self.output_types = []
-      
+
+      #Build L2 loss and KL-Divergence
+      if self.weight_decay == 'default':
+        lmbda = 1/self.imputation_target.shape[0]
+      else:
+        lmbda = self.weight_decay
+      l2_penalty = tf.multiply(tf.reduce_mean(
+          [tf.nn.l2_loss(w) for w in _w]+\
+          [tf.nn.l2_loss(w) for w in _zw]+\
+          [tf.nn.l2_loss(w) for w in _b]+\
+          [tf.nn.l2_loss(w) for w in _zb]+\
+          [tf.nn.l2_loss(w) for w in _ob]+\
+          [tf.nn.l2_loss(w) for w in _ow]
+          ), lmbda)
       #Assign cost and loss functions
       na_split = tf.split(self.na_idx, output_split, axis=1)
       true_split = tf.split(self.X, output_split, axis=1)
-      
+
       for n in range(len(outputs_struc)):
         if outputs_struc[n] == 'cont':
           if 'rmse' not in self.output_types:
@@ -501,10 +580,9 @@ class Midas(object):
               tf.reshape(tf.boolean_mask(true_split[n], na_split[n]), [-1, outputs_struc[n]])\
               *self.softmax_adj))
 
-      #loss_agg = tf.reshape(tf.concat(1, cost_list), [-1, len(size_index)])
       self.output_op = tf.concat(output_list, axis= 1)
 
-      self.joint_loss = tf.reduce_mean(cost_list)
+      self.joint_loss = tf.reduce_mean(tf.reduce_mean(cost_list) + kld + l2_penalty)
 
       self.train_step = tf.train.AdamOptimizer(self.learn_rate).minimize(self.joint_loss)
       self.init = tf.global_variables_initializer()
@@ -991,6 +1069,7 @@ class Midas(object):
           single_sacc = 0
           single_bacc = 0
           first =  True
+
           for sample in range(report_samples):
             minibatch_list = []
             for batch in self._batch_iter_output(feed_data, self.train_batch):
@@ -1055,6 +1134,7 @@ class Midas(object):
             elif self.output_types[n] == 'rmse':
               if plot_all:
                 for n_rmse in range(len(temp_pred.columns)):
+                  plt.figure()
                   t_p = temp_pred.iloc[:,n_rmse]
                   t_t = temp_true.iloc[:,n_rmse]
                   t_s = temp_spike[:,n_rmse]
