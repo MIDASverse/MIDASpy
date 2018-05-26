@@ -67,7 +67,7 @@ class Midas(object):
                seed= None,
                loss_scale= 1,
                init_scale= 1,
-               output_structure= [32, 32, 64],
+               output_structure= [16, 16, 32],
                individual_outputs= False,
                latent_space_size = 16,
                cont_adj= 1.0,
@@ -404,16 +404,16 @@ class Midas(object):
             outputs_struc += ["bin"]*size_index[n]
 
           else:
-            outputs_struc += size_index[n]
+            outputs_struc += [size_index[n]]
 
         elif n == 1:
           if cont_exists and cat_exists:
             outputs_struc += ["bin"]*size_index[n]
 
           else:
-            outputs_struc += size_index[n]
+            outputs_struc += [size_index[n]]
         else:
-          outputs_struc += size_index[n]
+          outputs_struc += [size_index[n]]
 
       if self.individual_outputs == True:
         output_layer_size = np.sum(self.output_structure)
@@ -471,8 +471,7 @@ class Midas(object):
                                            num_in= output_layer_structure[n],
                                            num_out= outputs_struc[n],
                                            scale= self.init_scale)
-          output_split.append(outputs_struc(n))
-
+          output_split.append(outputs_struc[n])
 
       #Build the neural network. Each layer is determined by the struc list
       def denoise(X):
@@ -553,7 +552,6 @@ class Midas(object):
       #Assign cost and loss functions
       na_split = tf.split(self.na_idx, output_split, axis=1)
       true_split = tf.split(self.X, output_split, axis=1)
-
       for n in range(len(outputs_struc)):
         if outputs_struc[n] == 'cont':
           if 'rmse' not in self.output_types:
@@ -572,14 +570,14 @@ class Midas(object):
                                               tf.boolean_mask(true_split[n], na_split[n]))\
               *self.binary_adj)
         elif type(outputs_struc[n]) == int:
-          if 'sacc' not in self.output_types:
-            self.output_types.append('sacc')
+          self.output_types.append('sacc')
           output_list.append(tf.nn.softmax(pred_split[n]))
           cost_list.append(tf.losses.softmax_cross_entropy(
               tf.reshape(tf.boolean_mask(pred_split[n], na_split[n]), [-1, outputs_struc[n]]),
               tf.reshape(tf.boolean_mask(true_split[n], na_split[n]), [-1, outputs_struc[n]])\
               *self.softmax_adj))
 
+      self.outputs_struc = outputs_struc
       self.output_op = tf.concat(output_list, axis= 1)
 
       self.joint_loss = tf.reduce_mean(tf.reduce_mean(cost_list) + kld + l2_penalty)
@@ -980,7 +978,6 @@ class Midas(object):
         b = np.argmax(pred, 1)
         return np.sum(a[spike.flatten()] == b[spike.flatten()]) / np.sum(spike)
       sacc_in = True
-
     if 'bacc' in self.output_types:
       def bacc(true, pred, spike):
         pred = (pred > 0.5).astype(np.int_)
@@ -1000,7 +997,7 @@ class Midas(object):
     #Generate spike-in
     spike = []
     for n in range(len(self.size_index)):
-      if self.output_types[n] == 'sacc':
+      if type(self.output_types[n]) == 'sacc':
         temp_spike = pd.Series(np.random.choice([True, False],
                                                 size= self.imputation_target.shape[0],
                                                 p= [spikein, 1-spikein]))
@@ -1021,7 +1018,6 @@ class Midas(object):
     na_loc[spike] = False
     spike = spike.values
     na_loc = na_loc.values
-
     #Initialise lists for plotting
     s_rmse = []
     a_rmse = []
