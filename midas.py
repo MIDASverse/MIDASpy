@@ -374,7 +374,7 @@ class Midas(object):
     #Commit some variables to the instance of the class
     self.size_index = size_index
     if not self.input_is_pipeline:
-      self.na_matrix = imputation_target.notnull().astype(bool)
+      self.na_matrix = imputation_target.notnull().astype(np.bool)
     self.imputation_target = imputation_target.fillna(0)
     if additional_data is not None:
       self.additional_data = additional_data.fillna(0)
@@ -475,8 +475,8 @@ class Midas(object):
 
       #Build the neural network. Each layer is determined by the struc list
       def denoise(X):
+        #Input tx
         for n in range(len(struc_list) -1):
-          #Input tx
           if n == 0:
             X = self._build_layer(X, _w[n], _b[n],
                                   dropout_rate = self.input_drop)
@@ -497,6 +497,7 @@ class Midas(object):
         return x_mu + latent_z * tf.exp(x_log_sigma)
 
       def from_z(X):
+        #Joint transform
         X = self._build_layer(X, _zw[1], _zb[1], dropout_rate= 1)
         X = self._build_layer(X, _zw[2], _zb[2], dropout_rate= self.dropout_level)
 
@@ -515,14 +516,11 @@ class Midas(object):
         kld = tf.maximum(tf.reduce_mean(1 + 2*x_log_sigma*x_mu**2 - tf.exp(2-x_log_sigma),
                                        axis=1)*self.prior_strength * - 0.5, 0)
         return x_mu, x_log_sigma, kld
-
-
+      
       def impute(x_mu, x_log_sigma):
         z = sample_latent(x_mu, x_log_sigma)
         X = from_z(z)
         return X
-
-
 
       #Determine which imputation function is to be used. This is constructed to
       #take advantage of additional data provided.
@@ -531,6 +529,7 @@ class Midas(object):
       else:
         x_mu, x_log_sigma, kld = encode(self.X)
       pred_split = impute(x_mu, x_log_sigma)
+
       #Output functions
       output_list = []
       cost_list = []
@@ -549,6 +548,7 @@ class Midas(object):
           [tf.nn.l2_loss(w) for w in _ob]+\
           [tf.nn.l2_loss(w) for w in _ow]
           ), lmbda)
+
       #Assign cost and loss functions
       na_split = tf.split(self.na_idx, output_split, axis=1)
       true_split = tf.split(self.X, output_split, axis=1)
@@ -558,23 +558,23 @@ class Midas(object):
             self.output_types.append('rmse')
           output_list.append(pred_split[n])
           cost_list.append(
-              tf.losses.mean_squared_error(tf.boolean_mask(pred_split[n], na_split[n]),
-                                           tf.boolean_mask(true_split[n], na_split[n])\
+              tf.losses.mean_squared_error(tf.boolean_mask(true_split[n], na_split[n]),
+                                           tf.boolean_mask(pred_split[n], na_split[n])\
                                            *self.cont_adj))
         elif outputs_struc[n] == 'bin':
           if 'bacc' not in self.output_types:
             self.output_types.append('bacc')
           output_list.append(tf.nn.sigmoid(pred_split[n]))
           cost_list.append(
-              tf.losses.sigmoid_cross_entropy(tf.boolean_mask(pred_split[n], na_split[n]),
-                                              tf.boolean_mask(true_split[n], na_split[n]))\
+              tf.losses.sigmoid_cross_entropy(tf.boolean_mask(true_split[n], na_split[n]),
+                                              tf.boolean_mask(pred_split[n], na_split[n]))\
               *self.binary_adj)
         elif type(outputs_struc[n]) == int:
           self.output_types.append('sacc')
           output_list.append(tf.nn.softmax(pred_split[n]))
           cost_list.append(tf.losses.softmax_cross_entropy(
-              tf.reshape(tf.boolean_mask(pred_split[n], na_split[n]), [-1, outputs_struc[n]]),
-              tf.reshape(tf.boolean_mask(true_split[n], na_split[n]), [-1, outputs_struc[n]])\
+              tf.reshape(tf.boolean_mask(true_split[n], na_split[n]), [-1, outputs_struc[n]]),
+              tf.reshape(tf.boolean_mask(pred_split[n], na_split[n]), [-1, outputs_struc[n]])\
               *self.softmax_adj))
 
       self.outputs_struc = outputs_struc
@@ -967,6 +967,8 @@ class Midas(object):
                            " which use a pipeline function for input.")
     #These values simplify control flow used later for error calculation and
     #visualisation of convergence.
+    if excessive:
+      import time
     rmse_in = False
     sacc_in = False
     bacc_in = False
@@ -997,11 +999,10 @@ class Midas(object):
     #Generate spike-in
     spike = []
     for n in range(len(self.size_index)):
-      if type(self.output_types[n]) == 'sacc':
+      if self.output_types[n] == 'sacc':
         temp_spike = pd.Series(np.random.choice([True, False],
                                                 size= self.imputation_target.shape[0],
                                                 p= [spikein, 1-spikein]))
-
         spike.append(pd.concat([temp_spike]*self.size_index[n], axis=1))
         n_softmax += 1
 
@@ -1044,6 +1045,7 @@ class Midas(object):
                              feed_dict= feedin)
             print("Current cost:", loss)
             print(out)
+            time.sleep(5)
           else:
             loss, _ = sess.run([self.joint_loss, self.train_step],
                              feed_dict= feedin)
@@ -1119,7 +1121,8 @@ class Midas(object):
             if self.output_types[n] == 'sacc':
               temp_spike = temp_spike[:,0]
               if plot_all:
-                temp_pred[temp_spike].mean().plot(kind= 'bar', label= 'Predicted values')
+                temp_pred[temp_spike].mean().plot(kind= 'bar', color= 'C0',
+                         label= 'Predicted values')
                 temp_true[temp_spike].mean().plot(kind= 'bar', alpha= 0.5,
                          color= 'r', align= 'edge', label= 'Known values')
                 plt.title('Spiked categorical proportion')
@@ -1134,7 +1137,7 @@ class Midas(object):
                   t_p = temp_pred.iloc[:,n_rmse]
                   t_t = temp_true.iloc[:,n_rmse]
                   t_s = temp_spike[:,n_rmse]
-                  t_p[t_s].plot(kind= 'density', label= 'Predicted values')
+                  t_p[t_s].plot(kind= 'density', color= 'C0', label= 'Predicted values')
                   t_t[t_s].plot(kind= 'density', alpha= 0.5, color= 'r', label= 'Known values')
                   plt.title('Density plot of spiked continuous values: ' + \
                             temp_pred.columns[n_rmse])
@@ -1145,7 +1148,8 @@ class Midas(object):
                                          temp_pred[temp_spike]))
             else:
               if plot_all:
-                temp_pred[temp_spike].mean().plot(kind= 'bar', label= 'Predicted proportions')
+                temp_pred[temp_spike].mean().plot(kind= 'bar', color= 'C0',
+                         label= 'Predicted proportions')
                 temp_true[temp_spike].mean().plot(kind= 'bar', alpha= 0.5,
                          color= 'r', align= 'edge', label= 'Known proportions')
                 plt.title('Spiked binary proportions')
