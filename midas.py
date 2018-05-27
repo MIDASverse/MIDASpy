@@ -461,7 +461,7 @@ class Midas(object):
       assert len(output_layer_structure) == len(outputs_struc)
       output_split = []
       if self.individual_outputs:
-        _w, _b = self._build_variables(weights= _zw, biases= _zb,
+        _w, _b = self._build_variables(weights= _w, biases= _b,
                                        num_in= struc_list[-1],
                                        num_out= output_layer_size,
                                        scale= self.init_scale)
@@ -592,10 +592,10 @@ class Midas(object):
           if 'rmse' not in self.output_types:
             self.output_types.append('rmse')
           output_list.append(pred_split[n])
-          cost_list.append(
+          cost_list.append(tf.sqrt(
               tf.losses.mean_squared_error(tf.boolean_mask(true_split[n], na_split[n]),
                                            tf.boolean_mask(pred_split[n], na_split[n])\
-                                           *self.cont_adj))
+                                           *self.cont_adj)))
         elif outputs_struc[n] == 'bin':
           if 'bacc' not in self.output_types:
             self.output_types.append('bacc')
@@ -615,9 +615,9 @@ class Midas(object):
       self.outputs_struc = outputs_struc
       self.output_op = tf.concat(output_list, axis= 1)
       if self.vae_layer:
-        self.joint_loss = tf.reduce_mean(tf.reduce_mean(cost_list) + kld + l2_penalty)
+        self.joint_loss = tf.reduce_mean(tf.reduce_sum(cost_list) + kld + l2_penalty)
       else:
-        self.joint_loss = tf.reduce_mean(tf.reduce_mean(cost_list) + l2_penalty)
+        self.joint_loss = tf.reduce_mean(tf.reduce_sum(cost_list) + l2_penalty)
 
       self.train_step = tf.train.AdamOptimizer(self.learn_rate).minimize(self.joint_loss)
       self.init = tf.global_variables_initializer()
