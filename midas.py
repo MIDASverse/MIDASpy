@@ -67,8 +67,10 @@ class Midas(object):
                seed= None,
                loss_scale= 1,
                init_scale= 1,
-               output_structure= [16, 16, 32],
+               vae_layer= True,
                individual_outputs= False,
+               manual_outputs= False,
+               output_structure= [16, 16, 32],
                latent_space_size = 16,
                cont_adj= 1.0,
                binary_adj= 1.0,
@@ -164,9 +166,11 @@ class Midas(object):
     self.seed = None
     self.input_is_pipeline = False
     self.input_pipeline = None
+    self.vae_layer = vae_layer
     self.loss_scale = loss_scale
     self.init_scale = init_scale
     self.individual_outputs = individual_outputs
+    self.manual_outputs = manual_outputs
     self.latent_space_size = latent_space_size
     self.dropout_level = dropout_level
     self.prior_strength = vae_alpha
@@ -415,7 +419,7 @@ class Midas(object):
         else:
           outputs_struc += [size_index[n]]
 
-      if self.individual_outputs == True:
+      if self.manual_outputs == True:
         output_layer_size = np.sum(self.output_structure)
         output_layer_structure = self.output_structure
       else:
@@ -443,35 +447,48 @@ class Midas(object):
                                        num_in= struc_list[n],
                                        num_out= struc_list[n+1],
                                        scale= self.init_scale)
-      #Latent state, variance
-      _zw, _wb = self._build_variables(weights= _zw, biases= _zb,
-                                       num_in= struc_list[-1],
-                                       num_out= self.latent_space_size*2,
-                                       scale= self.init_scale)
-      _zw, _wb = self._build_variables(weights= _zw, biases= _zb,
-                                       num_in= self.latent_space_size,
-                                       num_out= struc_list[-1],
-                                       scale= self.init_scale)
-      _zw, _wb = self._build_variables(weights= _zw, biases= _zb,
-                                       num_in= struc_list[-1],
-                                       num_out= output_layer_size,
-                                       scale= self.init_scale)
+      if self.vae_layer:
+        #Latent state, variance
+        _zw, _wb = self._build_variables(weights= _zw, biases= _zb,
+                                         num_in= struc_list[-1],
+                                         num_out= self.latent_space_size*2,
+                                         scale= self.init_scale)
+        _zw, _wb = self._build_variables(weights= _zw, biases= _zb,
+                                         num_in= self.latent_space_size,
+                                         num_out= struc_list[-1],
+                                         scale= self.init_scale)
       #Output, specialisation
       assert len(output_layer_structure) == len(outputs_struc)
       output_split = []
-      for n in range(len(outputs_struc)):
-        if type(outputs_struc[n]) == str:
+      if self.individual_outputs:
+        _w, _b = self._build_variables(weights= _zw, biases= _zb,
+                                       num_in= struc_list[-1],
+                                       num_out= output_layer_size,
+                                       scale= self.init_scale)
+        for n in range(len(outputs_struc)):
+          if type(outputs_struc[n]) == str:
+            _ow, _ob = self._build_variables(weights= _ow, biases= _ob,
+                                             num_in= output_layer_structure[n],
+                                             num_out= 1,
+                                             scale= self.init_scale)
+            output_split.append(1)
+          elif type(outputs_struc[n]) == int:
+            _ow, _ob = self._build_variables(weights= _ow, biases= _ob,
+                                             num_in= output_layer_structure[n],
+                                             num_out= outputs_struc[n],
+                                             scale= self.init_scale)
+            output_split.append(outputs_struc[n])
+      else:
+        for n in range(len(outputs_struc)):
+          if type(outputs_struc[n]) == str:
+            output_split.append(1)
+          elif type(outputs_struc[n]) == int:
+            output_split.append(outputs_struc[n])
           _ow, _ob = self._build_variables(weights= _ow, biases= _ob,
-                                           num_in= output_layer_structure[n],
-                                           num_out= 1,
-                                           scale= self.init_scale)
-          output_split.append(1)
-        elif type(outputs_struc[n]) == int:
-          _ow, _ob = self._build_variables(weights= _ow, biases= _ob,
-                                           num_in= output_layer_structure[n],
-                                           num_out= outputs_struc[n],
-                                           scale= self.init_scale)
-          output_split.append(outputs_struc[n])
+                                           num_in= struc_list[-1],
+                                           num_out= in_size)
+          
+
 
       #Build the neural network. Each layer is determined by the struc list
       def denoise(X):
@@ -484,51 +501,61 @@ class Midas(object):
             X = self._build_layer(X, _w[n], _b[n],
                                   dropout_rate = self.dropout_level)
         return X
-
-      def to_z(X):
-        #Latent tx
-        X = self._build_layer(X, _zw[0], _zb[0], dropout_rate = self.dropout_level,
-                                 output_layer= True)
-        x_mu, x_log_sigma = tf.split(X, [self.latent_space_size]*2, axis=1)
-        return x_mu, x_log_sigma
-
-      def sample_latent(x_mu, x_log_sigma):
-        latent_z = tf.random_normal(tf.shape(x_mu))
-        return x_mu + latent_z * tf.exp(x_log_sigma)
-
-      def from_z(X):
-        #Joint transform
-        X = self._build_layer(X, _zw[1], _zb[1], dropout_rate= 1)
-        X = self._build_layer(X, _zw[2], _zb[2], dropout_rate= self.dropout_level)
-
-        #Output tx
-        base_splits = tf.split(X, output_layer_structure, axis=1)
-        recombined = []
-        for n in range(len(outputs_struc)):
-          recombined.append(self._build_layer(base_splits[n], _ow[n], _ob[n],
-                                              dropout_rate = self.dropout_level,
-                                              output_layer=True))
-        return recombined
-
-      def encode(X):
-        X = denoise(X)
-        x_mu, x_log_sigma = to_z(X)
-        kld = tf.maximum(tf.reduce_mean(1 + 2*x_log_sigma*x_mu**2 - tf.exp(2-x_log_sigma),
-                                       axis=1)*self.prior_strength * - 0.5, 0)
-        return x_mu, x_log_sigma, kld
       
-      def impute(x_mu, x_log_sigma):
-        z = sample_latent(x_mu, x_log_sigma)
-        X = from_z(z)
-        return X
+      if self.vae_layer:
+        def to_z(X):
+          #Latent tx
+          X = self._build_layer(X, _zw[0], _zb[0], dropout_rate = self.dropout_level,
+                                   output_layer= True)
+          x_mu, x_log_sigma = tf.split(X, [self.latent_space_size]*2, axis=1)
+          return x_mu, x_log_sigma
+  
+        def from_z(x_mu, x_log_sigma):
+          #Joint transform
+          latent_z = tf.random_normal(tf.shape(x_mu))
+          X = x_mu + latent_z * tf.exp(x_log_sigma)
+          X = self._build_layer(X, _zw[1], _zb[1], dropout_rate= 1)
+          return X
+        
+        def vae(X):
+          x_mu, x_log_sigma = to_z(X)
+          kld = tf.maximum(tf.reduce_mean(1 + 2*x_log_sigma*x_mu**2 - tf.exp(2-x_log_sigma),
+                                       axis=1)*self.prior_strength * - 0.5, 0)
+          X = from_z(x_mu, x_log_sigma)
+          return X, kld
+
+      
+      if self.individual_outputs:
+        def decode(X):
+          X = self._build_layer(X, _w[-1], _b[-1], dropout_rate= self.dropout_level)
+          #Output tx
+          base_splits = tf.split(X, output_layer_structure, axis=1)
+          decombined = []
+          for n in range(len(outputs_struc)):
+            decombined.append(self._build_layer(base_splits[n], _ow[n], _ob[n],
+                                                dropout_rate = self.dropout_level,
+                                                output_layer= True))
+          return decombined
+      else:  
+        def decode(X):
+          X = self._build_layer(X, _ow[0], _ob[0],
+                                dropout_rate = self.dropout_level,
+                                output_layer= True)
+          decombined = tf.split(X, output_split, axis=1)
+          return decombined
+
 
       #Determine which imputation function is to be used. This is constructed to
       #take advantage of additional data provided.
       if additional_data is not None:
-        x_mu, x_log_sigma, kld = encode(tf.concat([self.X, self.X_add], axis= 1))
+        encoded = denoise(tf.concat([self.X, self.X_add], axis= 1))
       else:
-        x_mu, x_log_sigma, kld = encode(self.X)
-      pred_split = impute(x_mu, x_log_sigma)
+        encoded = denoise(self.X)
+        
+      if self.vae_layer:
+        encoded, kld = vae(encoded)
+        
+      pred_split = decode(encoded)
 
       #Output functions
       output_list = []
@@ -540,14 +567,22 @@ class Midas(object):
         lmbda = 1/self.imputation_target.shape[0]
       else:
         lmbda = self.weight_decay
-      l2_penalty = tf.multiply(tf.reduce_mean(
-          [tf.nn.l2_loss(w) for w in _w]+\
-          [tf.nn.l2_loss(w) for w in _zw]+\
-          [tf.nn.l2_loss(w) for w in _b]+\
-          [tf.nn.l2_loss(w) for w in _zb]+\
-          [tf.nn.l2_loss(w) for w in _ob]+\
-          [tf.nn.l2_loss(w) for w in _ow]
-          ), lmbda)
+      if self.vae_layer:
+        l2_penalty = tf.multiply(tf.reduce_mean(
+            [tf.nn.l2_loss(w) for w in _w]+\
+            [tf.nn.l2_loss(w) for w in _zw]+\
+            [tf.nn.l2_loss(w) for w in _b]+\
+            [tf.nn.l2_loss(w) for w in _zb]+\
+            [tf.nn.l2_loss(w) for w in _ob]+\
+            [tf.nn.l2_loss(w) for w in _ow]
+            ), lmbda)
+      else:
+        l2_penalty = tf.multiply(tf.reduce_mean(
+            [tf.nn.l2_loss(w) for w in _w]+\
+            [tf.nn.l2_loss(w) for w in _b]+\
+            [tf.nn.l2_loss(w) for w in _ob]+\
+            [tf.nn.l2_loss(w) for w in _ow]
+            ), lmbda)
 
       #Assign cost and loss functions
       na_split = tf.split(self.na_idx, output_split, axis=1)
@@ -579,8 +614,10 @@ class Midas(object):
 
       self.outputs_struc = outputs_struc
       self.output_op = tf.concat(output_list, axis= 1)
-
-      self.joint_loss = tf.reduce_mean(tf.reduce_mean(cost_list) + kld + l2_penalty)
+      if self.vae_layer:
+        self.joint_loss = tf.reduce_mean(tf.reduce_mean(cost_list) + kld + l2_penalty)
+      else:
+        self.joint_loss = tf.reduce_mean(tf.reduce_mean(cost_list) + l2_penalty)
 
       self.train_step = tf.train.AdamOptimizer(self.learn_rate).minimize(self.joint_loss)
       self.init = tf.global_variables_initializer()
