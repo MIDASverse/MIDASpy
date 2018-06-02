@@ -227,17 +227,27 @@ class Midas(object):
   def _batch_iter_output(self,
                   train_data,
                   b_size = 256):
-    indices = np.arange(train_data.shape[0])
     """
     Identical to _batch_iter(), although designed for a single datasource
     """
 
+    indices = np.arange(train_data.shape[0])
     for start_idx in range(0, train_data.shape[0], b_size):
       excerpt = indices[start_idx:start_idx + b_size]
       if self.additional_data is None:
         yield train_data[excerpt]
       else:
         yield train_data[excerpt], self.additional_data.values[excerpt]
+  def _batch_iter_zsample(self,
+                          data,
+                          b_size = 256):
+    """
+    Identical to _batch_iter(), although designed for sampling from latent
+    """
+    indices = np.arange(data.shape[0])
+    for start_idx in range(0, data.shape[0], b_size):
+      excerpt = indices[start_idx:start_idx + b_size]
+      yield data[excerpt]
 
   def _build_layer(self,
                    X,
@@ -407,6 +417,8 @@ class Midas(object):
       self.na_idx = tf.placeholder(tf.bool, [None, in_size])
       if additional_data is not None:
         self.X_add = tf.placeholder(tf.float32, [None, add_size])
+      if self.vae_layer:
+        self.latent_inputs = tf.placeholder(tf.float32, [None, self.latent_space_size])
 
       #Build list for determining input and output structures
       struc_list = self.layer_structure.copy()
@@ -471,7 +483,7 @@ class Midas(object):
                                          scale= self.init_scale)
         _zw, _wb = self._build_variables(weights= _zw, biases= _zb,
                                          num_in= self.latent_space_size,
-                                         num_out= struc_list[-1],
+                                         num_out= self.output_layers[0],
                                          scale= self.init_scale)
 
       t_l = len(self.output_layers)
@@ -532,22 +544,24 @@ class Midas(object):
           x_mu, x_log_sigma = tf.split(X, [self.latent_space_size]*2, axis=1)
           return x_mu, x_log_sigma
 
-        def from_z(x_mu, x_log_sigma, output=False):
+        def from_z(z):
           #Joint transform
-          if output:
-            latent_z = mapped_dist.sample(sample_shape= tf.shape(x_mu))
-#            latent_z = tf.random_normal(tf.shape(x_mu))
-          else:
-            latent_z = tf.random_normal(tf.shape(x_mu))
-          X = x_mu + latent_z * tf.exp(x_log_sigma)
-          X = self._build_layer(X, _zw[1], _zb[1], dropout_rate= 1)
+          X = self._build_layer(z, _zw[1], _zb[1], dropout_rate= 1)
           return X
 
         def vae(X, output=False):
           x_mu, x_log_sigma = to_z(X)
+          if output:
+            reparam_z = mapped_dist.sample(sample_shape= tf.shape(x_mu))
+            #latent_z = tf.random_normal(tf.shape(x_mu))
+          else:
+            reparam_z = tf.random_normal(tf.shape(x_mu))
+
           kld = tf.maximum(tf.reduce_mean(1 + 2*x_log_sigma*x_mu**2 - tf.exp(2-x_log_sigma),
-                                       axis=1)*self.prior_strength * - 0.5, 0.01)
-          X = from_z(x_mu, x_log_sigma, output)
+                                       axis=1)*self.prior_strength * - 0.5,
+            0.01)
+          z = x_mu + reparam_z * tf.exp(x_log_sigma)
+          X = from_z(z)
           return X, kld
 
 
@@ -566,7 +580,7 @@ class Midas(object):
       else:
         def decode(X):
           for n in range(t_l):
-            if n == t_l:
+            if n == t_l-1:
               X = self._build_layer(X, _ow[n], _ob[n],
                                     dropout_rate = self.dropout_level,
                                     output_layer= True)
@@ -575,7 +589,12 @@ class Midas(object):
                                     dropout_rate = self.dropout_level)
           decombined = tf.split(X, output_split, axis=1)
           return decombined
+      if self.vae_layer:
 
+        def decode_z(z):
+          X = from_z(z)
+          X = decode(X)
+          return X
 
       #Determine which imputation function is to be used. This is constructed to
       #take advantage of additional data provided.
@@ -593,7 +612,6 @@ class Midas(object):
         pred_split = decode(encoded)
         out_split = pred_split
       #Output functions
-      output_list = []
       cost_list = []
       self.output_types = []
 
@@ -606,16 +624,11 @@ class Midas(object):
         l2_penalty = tf.multiply(tf.reduce_mean(
             [tf.nn.l2_loss(w) for w in _w]+\
             [tf.nn.l2_loss(w) for w in _zw]+\
-            [tf.nn.l2_loss(w) for w in _b]+\
-            [tf.nn.l2_loss(w) for w in _zb]+\
-            [tf.nn.l2_loss(w) for w in _ob]+\
             [tf.nn.l2_loss(w) for w in _ow]
             ), lmbda)
       else:
         l2_penalty = tf.multiply(tf.reduce_mean(
             [tf.nn.l2_loss(w) for w in _w]+\
-            [tf.nn.l2_loss(w) for w in _b]+\
-            [tf.nn.l2_loss(w) for w in _ob]+\
             [tf.nn.l2_loss(w) for w in _ow]
             ), lmbda)
 
@@ -627,7 +640,6 @@ class Midas(object):
         if outputs_struc[n] == 'cont':
           if 'rmse' not in self.output_types:
             self.output_types.append('rmse')
-          output_list.append(out_split[n])
           cost_list.append(tf.sqrt(
               tf.losses.mean_squared_error(tf.boolean_mask(true_split[n], na_split[n]),
                                            tf.boolean_mask(pred_split[n], na_split[n])\
@@ -635,23 +647,39 @@ class Midas(object):
         elif outputs_struc[n] == 'bin':
           if 'bacc' not in self.output_types:
             self.output_types.append('bacc')
-          output_list.append(tf.nn.sigmoid(out_split[n]))
           cost_list.append(
               tf.losses.sigmoid_cross_entropy(tf.boolean_mask(true_split[n], na_split[n]),
                                               tf.boolean_mask(pred_split[n], na_split[n]))\
               *self.binary_adj * na_adj)
         elif type(outputs_struc[n]) == int:
           self.output_types.append('sacc')
-          output_list.append(tf.nn.softmax(out_split[n]))
           cost_list.append(tf.losses.softmax_cross_entropy(
               tf.reshape(tf.boolean_mask(true_split[n], na_split[n]), [-1, outputs_struc[n]]),
               tf.reshape(tf.boolean_mask(pred_split[n], na_split[n]), [-1, outputs_struc[n]])\
               *self.softmax_adj * na_adj))
 
+      def output_function(out_split):
+        output_list = []
+        #Break outputs into their parts
+        for n in range(len(outputs_struc)):
+          if outputs_struc[n] == 'cont':
+            output_list.append(out_split[n])
+          elif outputs_struc[n] == 'bin':
+            output_list.append(tf.nn.sigmoid(out_split[n]))
+          elif type(outputs_struc[n]) == int:
+            output_list.append(tf.nn.softmax(out_split[n]))
+        return tf.concat(output_list, axis= 1)
+
+
       self.outputs_struc = outputs_struc
-      self.output_op = tf.concat(output_list, axis= 1)
+      self.output_op = output_function(out_split)
       if self.vae_layer:
         self.joint_loss = tf.reduce_mean(tf.reduce_sum(cost_list) + kld + l2_penalty)
+        self.encode_to_z = to_z(encoded)
+        self.gen_from_z_sample = output_function(decode_z(mapped_dist.sample(
+            sample_shape= tf.shape(self.latent_inputs))))
+        self.gen_from_z_inputs = output_function(decode_z(self.latent_inputs))
+
       else:
         self.joint_loss = tf.reduce_mean(tf.reduce_sum(cost_list) + l2_penalty)
 
@@ -1053,6 +1081,7 @@ class Midas(object):
         b = np.argmax(pred, 1)
         return np.sum(a[spike.flatten()] == b[spike.flatten()]) / np.sum(spike)
       sacc_in = True
+
     if 'bacc' in self.output_types:
       def bacc(true, pred, spike):
         pred = (pred > 0.5).astype(np.int_)
@@ -1114,7 +1143,6 @@ class Midas(object):
           feedin = {self.X: batch[0], self.na_idx: batch[1]}
           if self.additional_data is not None:
             feedin[self.X_add] = batch[2]
-
           if excessive:
             out, loss, _ = sess.run([self.output_op, self.joint_loss, self.train_step],
                              feed_dict= feedin)
@@ -1514,4 +1542,138 @@ class Midas(object):
 
     return self
 
+  def sample_from_z(self,
+                    sample_size= 256,
+                    verbose= True):
+    """
+    Method used to generate new samples by drawing on the default Student-T(3)
+    sampling distribution. In effect, generates new data samples.
+    Arguments:
+
+      sample_size: Integer. Number of sample observations to draw at once.
+
+      verbose: Boolean. Prints out messages.
+
+    Returns:
+      Sampled_output
+    """
+    if not self.model_built:
+      raise AttributeError("The computation graph must be built before the model"\
+                           " can be trained")
+    if not self.vae_layer:
+      raise AttributeError("The model must include a VAE layer to be used to generate"\
+                           " new observations from a latent distribution")
+    if self.input_is_pipeline:
+      raise AttributeError("Model was constructed to accept pipeline data, either"\
+                           " use 'pipeline_yield_samples' method or rebuild model "\
+                           "with in-memory dataset.")
+    with tf.Session(graph= self.graph) as sess:
+      self.saver.restore(sess, self.savepath)
+      if verbose:
+        print("Model restored.")
+      feedin = {self.latent_inputs: np.zeros([sample_size, self.latent_space_size])}
+      out = sess.run(self.gen_from_z_sample, feed_dict= feedin)
+      sampled_output = pd.DataFrame(out,
+        columns= self.imputation_target.columns)
+    return sampled_output
+
+  def transform_from_z(self,
+                       data,
+                       b_size= 256,
+                       verbose= True):
+    """
+    Method used to generate new samples by drawing on the default Student-T(3)
+    sampling distribution. In effect, generates new data samples.
+    Arguments:
+
+      data: Pandas dataframe or numpy array, as wide as latent_space_size. These
+      numbers can be sampled from some distribution, or can be structured vectors
+      to enable sweeping through the data space.
+
+      b_size: Integer. Number of data entries to process at once. For managing
+      larger input datasets, smaller numbers may be required.
+
+      verbose: Boolean. Prints out messages.
+
+    Returns:
+      Generated_output
+    """
+    if not self.model_built:
+      raise AttributeError("The computation graph must be built before the model"\
+                           " can be trained")
+    if not self.vae_layer:
+      raise AttributeError("The model must include a VAE layer to be used to generate"\
+                           " new observations from a latent distribution")
+    if self.input_is_pipeline:
+      raise AttributeError("Model was constructed to accept pipeline data, either"\
+                           " use 'pipeline_yield_samples' method or rebuild model "\
+                           "with in-memory dataset.")
+    assert data.shape[1] == self.latent_space_size
+    with tf.Session(graph= self.graph) as sess:
+      self.saver.restore(sess, self.savepath)
+      if verbose:
+        print("Model restored.")
+      feed_data = data
+      minibatch_list = []
+      for batch in self._batch_iter_zsample(feed_data, b_size):
+        feedin = {self.latent_inputs: batch}
+        y_batch = pd.DataFrame(sess.run(self.gen_from_z_inputs,
+                                      feed_dict= feedin),
+                             columns= self.imputation_target.columns)
+        minibatch_list.append(y_batch)
+      generated_output = pd.DataFrame(pd.concat(minibatch_list, ignore_index= True),
+                           columns= self.imputation_target.columns)
+    return generated_output
+
+  def inputs_to_z(self,
+                  b_size= 256,
+                  verbose= True):
+    """
+    Method used for transforming imputation_target into a latent representation
+    for analysis. Can be used for observing how data behaves in a lower dimensional
+    space, etc.
+
+    Args:
+      m: Integer. Number of imputations to generate.
+
+      b_size: Integer. Number of data entries to process at once. For managing
+      wider datasets, smaller numbers may be required.
+
+      verbose: Boolean. Prints out messages.
+
+    Returns:
+      Self, z_mu, z_log_sigma
+    """
+    if not self.model_built:
+      raise AttributeError("The computation graph must be built before the model"\
+                           " can be trained")
+    if not self.vae_layer:
+      raise AttributeError("The model must include a VAE layer to be used to encode"\
+                           " the dataset into the latent space")
+
+    if self.input_is_pipeline:
+      raise AttributeError("Model was constructed to accept pipeline data, either"\
+                           " use 'pipeline_yield_samples' method or rebuild model "\
+                           "with in-memory dataset.")
+    with tf.Session(graph= self.graph) as sess:
+      self.saver.restore(sess, self.savepath)
+      if verbose:
+        print("Model restored.")
+      feed_data = self.imputation_target.values
+      mu_list = []
+      sigma_list = []
+      for batch in self._batch_iter_output(feed_data, b_size):
+        if self.additional_data is not None:
+          feedin = {self.X: batch[0], self.X_add: batch[1]}
+        else:
+          feedin = {self.X: batch}
+        batch_mu, batch_sigma = sess.run(self.encode_to_z,
+                                      feed_dict= feedin)
+        batch_mu = pd.DataFrame(batch_mu)
+        batch_sigma = pd.DataFrame(batch_sigma)
+        mu_list.append(batch_mu)
+        sigma_list.append(batch_sigma)
+    x_mu = pd.concat(mu_list, ignore_index= True)
+    x_log_sigma = pd.concat(sigma_list, ignore_index= True)
+    return x_mu, x_log_sigma
 
