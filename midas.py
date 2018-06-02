@@ -65,6 +65,7 @@ class Midas(object):
                train_batch = 16,
                savepath= 'tmp/MIDAS',
                seed= None,
+               output_layers= 'reversed',
                loss_scale= 1,
                init_scale= 1,
                vae_layer= True,
@@ -155,7 +156,18 @@ class Midas(object):
 
 
     """
-    self.layer_structure = layer_structure
+    if type(layer_structure) == list:
+      self.layer_structure = layer_structure
+    else:
+      raise ValueError("Layer structure must be specified within a list")
+    if type(output_layers) == list:
+      self.output_layers = output_layers
+
+    elif output_layers == 'reversed':
+      self.output_layers = layer_structure.copy()
+      self.output_layers.reverse()
+    else:
+      raise ValueError("Please specify correct output layer structure")
     self.learn_rate = learn_rate
     self.input_drop = input_drop
     self.model_built = False
@@ -448,6 +460,10 @@ class Midas(object):
                                        num_out= struc_list[n+1],
                                        scale= self.init_scale)
       if self.vae_layer:
+
+        mapped_dist = tf.distributions.StudentT(tf.constant(3.0),
+                                                tf.constant(0.0),
+                                                tf.constant(1.0))
         #Latent state, variance
         _zw, _wb = self._build_variables(weights= _zw, biases= _zb,
                                          num_in= struc_list[-1],
@@ -457,14 +473,18 @@ class Midas(object):
                                          num_in= self.latent_space_size,
                                          num_out= struc_list[-1],
                                          scale= self.init_scale)
+
+      t_l = len(self.output_layers)
       #Output, specialisation
       assert len(output_layer_structure) == len(outputs_struc)
       output_split = []
       if self.individual_outputs:
-        _w, _b = self._build_variables(weights= _w, biases= _b,
-                                       num_in= struc_list[-1],
-                                       num_out= output_layer_size,
-                                       scale= self.init_scale)
+        self.output_layers.append(output_layer_size)
+        for n in range(t_l):
+          _ow, _ob = self._build_variables(weights= _w, biases= _b,
+                                         num_in= self.output_layers[n],
+                                         num_out= self.output_layers[n+1],
+                                         scale= self.init_scale)
         for n in range(len(outputs_struc)):
           if type(outputs_struc[n]) == str:
             _ow, _ob = self._build_variables(weights= _ow, biases= _ob,
@@ -479,15 +499,17 @@ class Midas(object):
                                              scale= self.init_scale)
             output_split.append(outputs_struc[n])
       else:
+        self.output_layers.append(in_size)
         for n in range(len(outputs_struc)):
           if type(outputs_struc[n]) == str:
             output_split.append(1)
           elif type(outputs_struc[n]) == int:
             output_split.append(outputs_struc[n])
+        for n in range(t_l):
           _ow, _ob = self._build_variables(weights= _ow, biases= _ob,
-                                           num_in= struc_list[-1],
-                                           num_out= in_size)
-          
+                                           num_in= self.output_layers[n],
+                                           num_out= self.output_layers[n+1])
+
 
 
       #Build the neural network. Each layer is determined by the struc list
@@ -501,7 +523,7 @@ class Midas(object):
             X = self._build_layer(X, _w[n], _b[n],
                                   dropout_rate = self.dropout_level)
         return X
-      
+
       if self.vae_layer:
         def to_z(X):
           #Latent tx
@@ -509,38 +531,48 @@ class Midas(object):
                                    output_layer= True)
           x_mu, x_log_sigma = tf.split(X, [self.latent_space_size]*2, axis=1)
           return x_mu, x_log_sigma
-  
-        def from_z(x_mu, x_log_sigma):
+
+        def from_z(x_mu, x_log_sigma, output=False):
           #Joint transform
-          latent_z = tf.random_normal(tf.shape(x_mu))
+          if output:
+            latent_z = mapped_dist.sample(sample_shape= tf.shape(x_mu))
+#            latent_z = tf.random_normal(tf.shape(x_mu))
+          else:
+            latent_z = tf.random_normal(tf.shape(x_mu))
           X = x_mu + latent_z * tf.exp(x_log_sigma)
           X = self._build_layer(X, _zw[1], _zb[1], dropout_rate= 1)
           return X
-        
-        def vae(X):
+
+        def vae(X, output=False):
           x_mu, x_log_sigma = to_z(X)
           kld = tf.maximum(tf.reduce_mean(1 + 2*x_log_sigma*x_mu**2 - tf.exp(2-x_log_sigma),
-                                       axis=1)*self.prior_strength * - 0.5, 0)
-          X = from_z(x_mu, x_log_sigma)
+                                       axis=1)*self.prior_strength * - 0.5, 0.01)
+          X = from_z(x_mu, x_log_sigma, output)
           return X, kld
 
-      
+
       if self.individual_outputs:
         def decode(X):
-          X = self._build_layer(X, _w[-1], _b[-1], dropout_rate= self.dropout_level)
+          for n in range(t_l):
+            X = self._build_layer(X, _w[n], _b[n], dropout_rate= self.dropout_level)
           #Output tx
           base_splits = tf.split(X, output_layer_structure, axis=1)
           decombined = []
           for n in range(len(outputs_struc)):
-            decombined.append(self._build_layer(base_splits[n], _ow[n], _ob[n],
+            decombined.append(self._build_layer(base_splits[n+t_l], _ow[n+t_l], _ob[n+t_l],
                                                 dropout_rate = self.dropout_level,
                                                 output_layer= True))
           return decombined
-      else:  
+      else:
         def decode(X):
-          X = self._build_layer(X, _ow[0], _ob[0],
-                                dropout_rate = self.dropout_level,
-                                output_layer= True)
+          for n in range(t_l):
+            if n == t_l:
+              X = self._build_layer(X, _ow[n], _ob[n],
+                                    dropout_rate = self.dropout_level,
+                                    output_layer= True)
+            else:
+              X = self._build_layer(X, _ow[n], _ob[n],
+                                    dropout_rate = self.dropout_level)
           decombined = tf.split(X, output_split, axis=1)
           return decombined
 
@@ -551,12 +583,15 @@ class Midas(object):
         encoded = denoise(tf.concat([self.X, self.X_add], axis= 1))
       else:
         encoded = denoise(self.X)
-        
-      if self.vae_layer:
-        encoded, kld = vae(encoded)
-        
-      pred_split = decode(encoded)
 
+      if self.vae_layer:
+        perturb, kld = vae(encoded)
+        perturb_out, _ = vae(encoded, True)
+        pred_split = decode(perturb)
+        out_split = decode(perturb_out)
+      else:
+        pred_split = decode(encoded)
+        out_split = pred_split
       #Output functions
       output_list = []
       cost_list = []
@@ -588,29 +623,30 @@ class Midas(object):
       na_split = tf.split(self.na_idx, output_split, axis=1)
       true_split = tf.split(self.X, output_split, axis=1)
       for n in range(len(outputs_struc)):
+        na_adj = tf.cast(tf.count_nonzero(na_split[n]), tf.float32)/tf.cast(tf.size(na_split[n]), tf.float32)
         if outputs_struc[n] == 'cont':
           if 'rmse' not in self.output_types:
             self.output_types.append('rmse')
-          output_list.append(pred_split[n])
+          output_list.append(out_split[n])
           cost_list.append(tf.sqrt(
               tf.losses.mean_squared_error(tf.boolean_mask(true_split[n], na_split[n]),
                                            tf.boolean_mask(pred_split[n], na_split[n])\
-                                           *self.cont_adj)))
+                                           *self.cont_adj * na_adj)))
         elif outputs_struc[n] == 'bin':
           if 'bacc' not in self.output_types:
             self.output_types.append('bacc')
-          output_list.append(tf.nn.sigmoid(pred_split[n]))
+          output_list.append(tf.nn.sigmoid(out_split[n]))
           cost_list.append(
               tf.losses.sigmoid_cross_entropy(tf.boolean_mask(true_split[n], na_split[n]),
                                               tf.boolean_mask(pred_split[n], na_split[n]))\
-              *self.binary_adj)
+              *self.binary_adj * na_adj)
         elif type(outputs_struc[n]) == int:
           self.output_types.append('sacc')
-          output_list.append(tf.nn.softmax(pred_split[n]))
+          output_list.append(tf.nn.softmax(out_split[n]))
           cost_list.append(tf.losses.softmax_cross_entropy(
               tf.reshape(tf.boolean_mask(true_split[n], na_split[n]), [-1, outputs_struc[n]]),
               tf.reshape(tf.boolean_mask(pred_split[n], na_split[n]), [-1, outputs_struc[n]])\
-              *self.softmax_adj))
+              *self.softmax_adj * na_adj))
 
       self.outputs_struc = outputs_struc
       self.output_op = tf.concat(output_list, axis= 1)
@@ -1040,6 +1076,7 @@ class Midas(object):
         temp_spike = pd.Series(np.random.choice([True, False],
                                                 size= self.imputation_target.shape[0],
                                                 p= [spikein, 1-spikein]))
+
         spike.append(pd.concat([temp_spike]*self.size_index[n], axis=1))
         n_softmax += 1
 
@@ -1056,6 +1093,7 @@ class Midas(object):
     na_loc[spike] = False
     spike = spike.values
     na_loc = na_loc.values
+
     #Initialise lists for plotting
     s_rmse = []
     a_rmse = []
@@ -1104,8 +1142,11 @@ class Midas(object):
           single_sacc = 0
           single_bacc = 0
           first =  True
+          if plot_all:
+            plot_first = True
 
           for sample in range(report_samples):
+
             minibatch_list = []
             for batch in self._batch_iter_output(feed_data, self.train_batch):
               feedin = {self.X: batch}
@@ -1120,6 +1161,17 @@ class Midas(object):
               minibatch_list.append(y_batch)
             y_out = pd.DataFrame(pd.concat(minibatch_list, ignore_index= True),
                                  columns= self.imputation_target.columns)
+            if plot_all:
+              for n_rmse in range(len(y_out.columns)):
+                plt.figure(n_rmse+1)
+                t_t = self.imputation_target.iloc[:,n_rmse]
+                t_p = y_out.iloc[:,n_rmse]
+                t_s = spike[:,n_rmse]
+                if plot_first:
+                  t_p[t_s].plot(kind= 'density', color= 'k', alpha= 0.5, label='Single imputation')
+                else:
+                  t_p[t_s].plot(kind= 'density', color= 'k', alpha= 0.5, label='_nolegend_')
+              plot_first = False
 
             #Calculate individual imputation losses
             for n in range(len(self.size_index)):
@@ -1158,8 +1210,8 @@ class Midas(object):
             if self.output_types[n] == 'sacc':
               temp_spike = temp_spike[:,0]
               if plot_all:
-                temp_pred[temp_spike].mean().plot(kind= 'bar', color= 'C0',
-                         label= 'Predicted values')
+                temp_pred[temp_spike].mean().plot(kind= 'bar',
+                         label= 'Predicted values', color ='C0')
                 temp_true[temp_spike].mean().plot(kind= 'bar', alpha= 0.5,
                          color= 'r', align= 'edge', label= 'Known values')
                 plt.title('Spiked categorical proportion')
@@ -1170,23 +1222,27 @@ class Midas(object):
             elif self.output_types[n] == 'rmse':
               if plot_all:
                 for n_rmse in range(len(temp_pred.columns)):
-                  plt.figure()
+                  plt.figure(n_rmse+1)
                   t_p = temp_pred.iloc[:,n_rmse]
                   t_t = temp_true.iloc[:,n_rmse]
                   t_s = temp_spike[:,n_rmse]
-                  t_p[t_s].plot(kind= 'density', color= 'C0', label= 'Predicted values')
-                  t_t[t_s].plot(kind= 'density', alpha= 0.5, color= 'r', label= 'Known values')
+                  t_p[t_s].plot(kind= 'density', label= 'Imputation mean')
+                  t_t[t_s].plot(kind= 'density', color= 'r', label= 'Known values')
+                  t_t.plot(kind='kde', color= 'g', label= 'Original Data')
+                  hyp_output = pd.concat([t_t[np.invert(t_s)], t_p[t_s]])
+                  hyp_output.plot(kind='kde', color= 'm', label = 'New Distribution')
                   plt.title('Density plot of spiked continuous values: ' + \
                             temp_pred.columns[n_rmse])
                   plt.legend()
-                  plt.show()
+                plt.show()
 
               agg_rmse += np.sqrt(mse(temp_true[temp_spike],
                                          temp_pred[temp_spike]))
             else:
               if plot_all:
-                temp_pred[temp_spike].mean().plot(kind= 'bar', color= 'C0',
-                         label= 'Predicted proportions')
+                temp_pred[temp_spike].mean().plot(kind= 'bar',
+                         label= 'Predicted proportions',
+                         color= 'C0')
                 temp_true[temp_spike].mean().plot(kind= 'bar', alpha= 0.5,
                          color= 'r', align= 'edge', label= 'Known proportions')
                 plt.title('Spiked binary proportions')
