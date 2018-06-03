@@ -25,18 +25,6 @@ Variational autoencoder enabled. More flexibility in model specification, althou
 Key added features
 - Variational autoencoder capacity added, including encoding to and sampling from latent space
 
-Previous versions
------------------
-
-Alpha 0.1:
-
-Basic functionality feature-complete.
-- Support for mixed categorical and continuous data types
-- An "additional data" pipeline, allowing data that may be relevant to the imputation to be included (without being included in error generating statistics)
-- Simplified calibration for model complexity through the "overimputation" function, including visualization of reconstructed features
-- Basic large dataset functionality
-
- 
 Planned features:
 - Time dependence handling through recurrent cells
 - Improving the pipeline methods for very large datasets
@@ -48,6 +36,19 @@ Planned features:
 Wish list:
 - Smoothing for time series (LOESS?)
 - Informative priors?
+
+Previous versions
+-----------------
+
+Alpha 0.1:
+
+Basic functionality feature-complete.
+- Support for mixed categorical and continuous data types
+- An "additional data" pipeline, allowing data that may be relevant to the imputation to be included (without being included in error generating statistics)
+- Simplified calibration for model complexity through the "overimputation" function, including visualization of reconstructed features
+- Basic large dataset functionality
+
+
 
 
 
