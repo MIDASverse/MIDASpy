@@ -10,7 +10,7 @@ MIDAS requires
 - Python (>=2.7 or >=3.5)
 - Numpy (>=1.8.2)
 - Pandas (>=0.19.2)
-- Tensorflow (>= 1.3)
+- Tensorflow (>= 1.8)
 - Matplotlib
 
 Tensorflow also has a number of requirements, particularly if GPU acceleration is desired. See https://www.tensorflow.org/install/ for details.
@@ -18,17 +18,24 @@ Tensorflow also has a number of requirements, particularly if GPU acceleration i
 Currently, installation via pip/conda is not supported. For this early period, simply download the MIDAS.py script into the project working directory and call from there.
 
 
-ALPHA 0.1
+ALPHA 0.2
 ---------
+Variational autoencoder enabled. More flexibility in model specification, although defaulting to a simple mirrored system. Deeper analysis tools within .overimpute() for checking fit on continuous values. Constructor code deconflicted. Individual output specification enabled for very large datasets.
 
-Basic functionality feature-complete. Additional features will be added, but MIDAS is ready for most users. Next release TBD.
+Key added features
+- Variational autoencoder capacity added, including encoding to and sampling from latent space
 
+Previous versions
+-----------------
 
-Current features:
+Alpha 0.1:
+
+Basic functionality feature-complete.
 - Support for mixed categorical and continuous data types
 - An "additional data" pipeline, allowing data that may be relevant to the imputation to be included (without being included in error generating statistics)
 - Simplified calibration for model complexity through the "overimputation" function, including visualization of reconstructed features
 - Basic large dataset functionality
+
  
 Planned features:
 - Time dependence handling through recurrent cells
