@@ -72,7 +72,7 @@ class Midas(object):
                individual_outputs= False,
                manual_outputs= False,
                output_structure= [16, 16, 32],
-               latent_space_size = 16,
+               latent_space_size = 4,
                cont_adj= 1.0,
                binary_adj= 1.0,
                softmax_adj= 1.0,
@@ -183,6 +183,7 @@ class Midas(object):
     self.init_scale = init_scale
     self.individual_outputs = individual_outputs
     self.manual_outputs = manual_outputs
+
     self.latent_space_size = latent_space_size
     self.dropout_level = dropout_level
     self.prior_strength = vae_alpha
@@ -512,17 +513,15 @@ class Midas(object):
             output_split.append(outputs_struc[n])
       else:
         self.output_layers.append(in_size)
+        for n in range(t_l):
+          _ow, _ob = self._build_variables(weights= _ow, biases= _ob,
+                                           num_in= self.output_layers[n],
+                                           num_out= self.output_layers[n+1])
         for n in range(len(outputs_struc)):
           if type(outputs_struc[n]) == str:
             output_split.append(1)
           elif type(outputs_struc[n]) == int:
             output_split.append(outputs_struc[n])
-        for n in range(t_l):
-          _ow, _ob = self._build_variables(weights= _ow, biases= _ob,
-                                           num_in= self.output_layers[n],
-                                           num_out= self.output_layers[n+1])
-
-
 
       #Build the neural network. Each layer is determined by the struc list
       def denoise(X):
@@ -553,17 +552,15 @@ class Midas(object):
           x_mu, x_log_sigma = to_z(X)
           if output:
             reparam_z = mapped_dist.sample(sample_shape= tf.shape(x_mu))
-            #latent_z = tf.random_normal(tf.shape(x_mu))
+#            reparam_z = tf.random_normal(tf.shape(x_mu))
           else:
             reparam_z = tf.random_normal(tf.shape(x_mu))
-
+          z = x_mu + reparam_z * tf.exp(x_log_sigma)
           kld = tf.maximum(tf.reduce_mean(1 + 2*x_log_sigma*x_mu**2 - tf.exp(2-x_log_sigma),
                                        axis=1)*self.prior_strength * - 0.5,
             0.01)
-          z = x_mu + reparam_z * tf.exp(x_log_sigma)
           X = from_z(z)
           return X, kld
-
 
       if self.individual_outputs:
         def decode(X):
@@ -577,6 +574,7 @@ class Midas(object):
                                                 dropout_rate = self.dropout_level,
                                                 output_layer= True))
           return decombined
+
       else:
         def decode(X):
           for n in range(t_l):
@@ -589,8 +587,8 @@ class Midas(object):
                                     dropout_rate = self.dropout_level)
           decombined = tf.split(X, output_split, axis=1)
           return decombined
-      if self.vae_layer:
 
+      if self.vae_layer:
         def decode_z(z):
           X = from_z(z)
           X = decode(X)
@@ -610,7 +608,7 @@ class Midas(object):
         out_split = decode(perturb_out)
       else:
         pred_split = decode(encoded)
-        out_split = pred_split
+
       #Output functions
       cost_list = []
       self.output_types = []
@@ -636,14 +634,15 @@ class Midas(object):
       na_split = tf.split(self.na_idx, output_split, axis=1)
       true_split = tf.split(self.X, output_split, axis=1)
       for n in range(len(outputs_struc)):
-        na_adj = tf.cast(tf.count_nonzero(na_split[n]), tf.float32)/tf.cast(tf.size(na_split[n]), tf.float32)
+        na_adj = tf.cast(tf.count_nonzero(na_split[n]),tf.float32)\
+        /tf.cast(tf.size(na_split[n]),tf.float32)
         if outputs_struc[n] == 'cont':
           if 'rmse' not in self.output_types:
             self.output_types.append('rmse')
           cost_list.append(tf.sqrt(
               tf.losses.mean_squared_error(tf.boolean_mask(true_split[n], na_split[n]),
                                            tf.boolean_mask(pred_split[n], na_split[n])\
-                                           *self.cont_adj * na_adj)))
+                                           ))*self.cont_adj)# * na_adj)
         elif outputs_struc[n] == 'bin':
           if 'bacc' not in self.output_types:
             self.output_types.append('bacc')
@@ -655,8 +654,8 @@ class Midas(object):
           self.output_types.append('sacc')
           cost_list.append(tf.losses.softmax_cross_entropy(
               tf.reshape(tf.boolean_mask(true_split[n], na_split[n]), [-1, outputs_struc[n]]),
-              tf.reshape(tf.boolean_mask(pred_split[n], na_split[n]), [-1, outputs_struc[n]])\
-              *self.softmax_adj * na_adj))
+              tf.reshape(tf.boolean_mask(pred_split[n], na_split[n]), [-1, outputs_struc[n]]))\
+              *self.softmax_adj)# *na_adj)
 
       def output_function(out_split):
         output_list = []
@@ -672,8 +671,8 @@ class Midas(object):
 
 
       self.outputs_struc = outputs_struc
-      self.output_op = output_function(out_split)
       if self.vae_layer:
+        self.output_op = output_function(out_split)
         self.joint_loss = tf.reduce_mean(tf.reduce_sum(cost_list) + kld + l2_penalty)
         self.encode_to_z = to_z(encoded)
         self.gen_from_z_sample = output_function(decode_z(mapped_dist.sample(
@@ -681,6 +680,7 @@ class Midas(object):
         self.gen_from_z_inputs = output_function(decode_z(self.latent_inputs))
 
       else:
+        self.output_op = output_function(pred_split)
         self.joint_loss = tf.reduce_mean(tf.reduce_sum(cost_list) + l2_penalty)
 
       self.train_step = tf.train.AdamOptimizer(self.learn_rate).minimize(self.joint_loss)
@@ -1190,16 +1190,17 @@ class Midas(object):
             y_out = pd.DataFrame(pd.concat(minibatch_list, ignore_index= True),
                                  columns= self.imputation_target.columns)
             if plot_all:
-              for n_rmse in range(len(y_out.columns)):
-                plt.figure(n_rmse+1)
-                t_t = self.imputation_target.iloc[:,n_rmse]
-                t_p = y_out.iloc[:,n_rmse]
-                t_s = spike[:,n_rmse]
-                if plot_first:
-                  t_p[t_s].plot(kind= 'density', color= 'k', alpha= 0.5, label='Single imputation')
-                else:
-                  t_p[t_s].plot(kind= 'density', color= 'k', alpha= 0.5, label='_nolegend_')
-              plot_first = False
+              if 'rmse' in self.output_types:
+                for n in range(self.size_index[0]):
+                  plt.figure(n+1)
+                  t_t = self.imputation_target.iloc[:,n]
+                  t_p = y_out.iloc[:,n]
+                  t_s = spike[:,n]
+                  if plot_first:
+                    t_p[t_s].plot(kind= 'density', color= 'k', alpha= 0.5, label='Single imputation')
+                  else:
+                    t_p[t_s].plot(kind= 'density', color= 'k', alpha= 0.5, label='_nolegend_')
+                plot_first = False
 
             #Calculate individual imputation losses
             for n in range(len(self.size_index)):
