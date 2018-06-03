@@ -642,7 +642,7 @@ class Midas(object):
           cost_list.append(tf.sqrt(
               tf.losses.mean_squared_error(tf.boolean_mask(true_split[n], na_split[n]),
                                            tf.boolean_mask(pred_split[n], na_split[n])\
-                                           ))*self.cont_adj)# * na_adj)
+                                           ))*self.cont_adj * na_adj)
         elif outputs_struc[n] == 'bin':
           if 'bacc' not in self.output_types:
             self.output_types.append('bacc')
@@ -655,7 +655,7 @@ class Midas(object):
           cost_list.append(tf.losses.softmax_cross_entropy(
               tf.reshape(tf.boolean_mask(true_split[n], na_split[n]), [-1, outputs_struc[n]]),
               tf.reshape(tf.boolean_mask(pred_split[n], na_split[n]), [-1, outputs_struc[n]]))\
-              *self.softmax_adj)# *na_adj)
+              *self.softmax_adj *na_adj)
 
       def output_function(out_split):
         output_list = []
@@ -979,6 +979,7 @@ class Midas(object):
                  verbose= True,
                  verbosity_ival= 1,
                  spike_seed= 42,
+                 cont_kdes = False,
                  excessive= False
                  ):
     """
@@ -1068,6 +1069,9 @@ class Midas(object):
                            " which use a pipeline function for input.")
     #These values simplify control flow used later for error calculation and
     #visualisation of convergence.
+    if cont_kdes & (plot_all == False):
+      raise ValueError("Cannot plot KDEs if plot_all is False")
+    
     if excessive:
       import time
     rmse_in = False
@@ -1170,7 +1174,7 @@ class Midas(object):
           single_sacc = 0
           single_bacc = 0
           first =  True
-          if plot_all:
+          if cont_kdes:
             plot_first = True
 
           for sample in range(report_samples):
@@ -1189,7 +1193,7 @@ class Midas(object):
               minibatch_list.append(y_batch)
             y_out = pd.DataFrame(pd.concat(minibatch_list, ignore_index= True),
                                  columns= self.imputation_target.columns)
-            if plot_all:
+            if cont_kdes:
               if 'rmse' in self.output_types:
                 for n in range(self.size_index[0]):
                   plt.figure(n+1)
