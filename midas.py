@@ -494,7 +494,7 @@ class Midas(object):
       if self.individual_outputs:
         self.output_layers.append(output_layer_size)
         for n in range(t_l):
-          _ow, _ob = self._build_variables(weights= _w, biases= _b,
+          _ow, _ob = self._build_variables(weights= _ow, biases= _ob,
                                          num_in= self.output_layers[n],
                                          num_out= self.output_layers[n+1],
                                          scale= self.init_scale)
@@ -565,12 +565,12 @@ class Midas(object):
       if self.individual_outputs:
         def decode(X):
           for n in range(t_l):
-            X = self._build_layer(X, _w[n], _b[n], dropout_rate= self.dropout_level)
+            X = self._build_layer(X, _ow[n], _ob[n], dropout_rate= self.dropout_level)
           #Output tx
           base_splits = tf.split(X, output_layer_structure, axis=1)
           decombined = []
           for n in range(len(outputs_struc)):
-            decombined.append(self._build_layer(base_splits[n+t_l], _ow[n+t_l], _ob[n+t_l],
+            decombined.append(self._build_layer(base_splits[n], _ow[n+t_l], _ob[n+t_l],
                                                 dropout_rate = self.dropout_level,
                                                 output_layer= True))
           return decombined
