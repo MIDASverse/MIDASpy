@@ -1071,7 +1071,7 @@ class Midas(object):
     #visualisation of convergence.
     if cont_kdes & (plot_all == False):
       raise ValueError("Cannot plot KDEs if plot_all is False")
-    
+
     if excessive:
       import time
     rmse_in = False
@@ -1681,32 +1681,40 @@ class Midas(object):
     x_mu = pd.concat(mu_list, ignore_index= True)
     x_log_sigma = pd.concat(sigma_list, ignore_index= True)
     return x_mu, x_log_sigma
-  
+
   def change_imputation_target(self, new_target, additional_data= None):
     """
     Helper method to allow for imputed dataset to be hotswapped. MIDAS is not
     designed with such a function in mind, but this should allow for more flexible
     workflows.
     """
-    try:
-      saftey = new_target.head()[self.imputation_target.columns]
-    except:
-      ValueError("New target must have same columns as original target dataframe")
-      break
-    if self.additional_data is not None:
-      try:
-        saftey = additional_data.head()[self.additional_data.columns]
-      except:
-        ValueError("Supplied additional data must have same columns as original additional data dataframe")
-        break
+    if type(self.imputation_target) != type(new_target):
+      raise ValueError("New target must be of same type as original target dataset")
+    if type(self.imputation_target) == pd.core.series.Series:
+      if self.imputation_target.name != new_target.name:
+        raise ValueError("Ensure input series are from same source")
+    elif type(self.imputation_target) == pd.core.frame.DataFrame:
+      test_1 = new_target.shape[1] == self.imputation_target.shape[1]
+      test_2 = new_target.columns.isin(self.imputation_target.columns).sum() \
+      == new_target.shape[1]
+      if not test_1 & test_2:
+        raise ValueError("New target must have same columns as original target dataframe")
+      if self.additional_data is not None:
+        test_1 = new_target.shape[1] == self.additional_data.shape[1]
+        test_2 = additional_data.columns.isin(self.additional_data.columns).sum() \
+        == additional_data.shape[1]
+        if not test_1 & test_2:
+          raise ValueError("New target must have same columns as original target dataframe")
+    else:
+      raise ValueError("Target must be Pandas dataframe or series")
     self.imputation_target = new_target.copy()
     if self.additional_data is not None:
       self.additional_data = additional_data.copy()
+      self.additional_data.fillna(0, inplace= True)
     self.na_matrix = self.imputation_target.notnull().astype(np.bool)
     self.imputation_target.fillna(0, inplace= True)
-    self.additional_data.fillna(0, inplace= True)
     return self
-  
-  
-    
-    
+
+
+
+
