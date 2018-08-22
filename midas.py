@@ -1699,14 +1699,16 @@ class Midas(object):
       == new_target.shape[1]
       if not test_1 & test_2:
         raise ValueError("New target must have same columns as original target dataframe")
-      if self.additional_data is not None:
-        test_1 = new_target.shape[1] == self.additional_data.shape[1]
-        test_2 = additional_data.columns.isin(self.additional_data.columns).sum() \
-        == additional_data.shape[1]
-        if not test_1 & test_2:
-          raise ValueError("New target must have same columns as original target dataframe")
     else:
       raise ValueError("Target must be Pandas dataframe or series")
+    if self.additional_data is not None:
+      if additional_data is None:
+        raise ValueError("As additional data has been used, additional data must be provided")
+      test_1 = new_target.shape[1] == self.additional_data.shape[1]
+      test_2 = additional_data.columns.isin(self.additional_data.columns).sum()\
+      == additional_data.shape[1]
+      if not test_1 & test_2:
+        raise ValueError("New target must have same columns as original additional dataframe")
     self.imputation_target = new_target.copy()
     if self.additional_data is not None:
       self.additional_data = additional_data.copy()
