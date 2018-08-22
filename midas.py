@@ -1681,4 +1681,32 @@ class Midas(object):
     x_mu = pd.concat(mu_list, ignore_index= True)
     x_log_sigma = pd.concat(sigma_list, ignore_index= True)
     return x_mu, x_log_sigma
-
+  
+  def change_imputation_target(self, new_target, additional_data= None):
+    """
+    Helper method to allow for imputed dataset to be hotswapped. MIDAS is not
+    designed with such a function in mind, but this should allow for more flexible
+    workflows.
+    """
+    try:
+      saftey = new_target.head()[self.imputation_target.columns]
+    except:
+      ValueError("New target must have same columns as original target dataframe")
+      break
+    if self.additional_data is not None:
+      try:
+        saftey = additional_data.head()[self.additional_data.columns]
+      except:
+        ValueError("Supplied additional data must have same columns as original additional data dataframe")
+        break
+    self.imputation_target = new_target.copy()
+    if self.additional_data is not None:
+      self.additional_data = additional_data.copy()
+    self.na_matrix = self.imputation_target.notnull().astype(np.bool)
+    self.imputation_target.fillna(0, inplace= True)
+    self.additional_data.fillna(0, inplace= True)
+    return self
+  
+  
+    
+    
