@@ -1,2 +1,2 @@
-from .imputer import *
+from .midas_base import *
 
