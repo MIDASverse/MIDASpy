@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='midas',
       version= '0.2',
@@ -7,5 +7,5 @@ setup(name='midas',
       author= 'Alex Stenlake',
       author_email= 'alex.stenlake@gmail.com',
       licence= 'Apache',
-      packages= ['midas'],
+      packages= find_packages(),
       zip_safe=False)

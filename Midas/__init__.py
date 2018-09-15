@@ -1,2 +1,1 @@
-def test():
-  print("test done")
+from .midas_base import Midas
