@@ -1,1 +1,1 @@
-from midas_base import MidasImputer
+from .midas_base import MidasImputer
