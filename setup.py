@@ -7,5 +7,5 @@ setup(name='midas',
       author= 'Alex Stenlake',
       author_email= 'alex.stenlake@gmail.com',
       licence= 'Apache',
-      packages= 'midas',
+      packages= ['midas'],
       zip_safe=False)
