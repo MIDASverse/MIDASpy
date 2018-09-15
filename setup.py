@@ -16,7 +16,7 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = 'Midas'
+NAME = 'midas'
 DESCRIPTION = 'Class distribution for Multiple Imputation with Denoising Autoencoders'
 URL = 'https://github.com/Oracen/MIDAS'
 EMAIL = 'alex.stenlake@gmail.com'
@@ -110,9 +110,9 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=find_packages(exclude=('tests',)),
+    # packages=find_packages(exclude=('tests',)),
     # If your package is a single module, use this instead of 'packages':
-    # packages=['midas'],
+    packages=['midas'],
 
     # entry_points={
     #     'console_scripts': ['mycli=mymodule:cli'],
