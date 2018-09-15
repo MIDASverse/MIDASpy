@@ -7,10 +7,10 @@ Installation
 ------------
 
 MIDAS requires
-- Python (>=2.7 or >=3.5)
-- Numpy (>=1.8.2)
-- Pandas (>=0.19.2)
-- Tensorflow (>= 1.8)
+- Python (>=3.5, 2.X coming)
+- Numpy (>=1.5)
+- Pandas (>=0.19)
+- Tensorflow (>= 1.10)
 - Matplotlib
 
 Tensorflow also has a number of requirements, particularly if GPU acceleration is desired. See https://www.tensorflow.org/install/ for details.
