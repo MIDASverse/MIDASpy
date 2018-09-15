@@ -1,2 +1,1 @@
-from .midas_base import *
-
+print('test done')
