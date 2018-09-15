@@ -1,1 +1,1 @@
-from .midas import Midas
+from .midas import midas
