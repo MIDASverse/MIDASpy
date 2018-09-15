@@ -1,1 +1,1 @@
-from .imputation import MidasImputer
+from .Midas import *
