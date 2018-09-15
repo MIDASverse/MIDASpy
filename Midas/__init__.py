@@ -1,1 +1,1 @@
-from .midas_base import Midas
+from . import midas_base
