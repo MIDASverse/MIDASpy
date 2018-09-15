@@ -29,7 +29,8 @@ REQUIRED = [
     'numpy',
     'pandas',
     'tensorflow',
-    'matplotlib'
+    'matplotlib',
+    'scikit-learn'
 ]
 
 # What packages are optional?
@@ -111,7 +112,7 @@ setup(
     url=URL,
     # packages=find_packages(exclude=('tests',)),
     # If your package is a single module, use this instead of 'packages':
-    py_modules=['imputer'],
+    packages=['midas'],
 
     # entry_points={
     #     'console_scripts': ['mycli=mymodule:cli'],
