@@ -22,7 +22,7 @@ URL = 'https://github.com/Oracen/MIDAS'
 EMAIL = 'alex.stenlake@gmail.com'
 AUTHOR = 'Alex Stenlake'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = '0.2
+VERSION = '0.2'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
