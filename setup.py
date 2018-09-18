@@ -7,5 +7,6 @@ setup(name='midas',
       author= 'Alex Stenlake',
       author_email= 'alex.stenlake@gmail.com',
       licence= 'Apache',
-      packages= find_packages(),
+      #packages= find_packages(),
+      packages=['midas_base'],
       zip_safe=False)
