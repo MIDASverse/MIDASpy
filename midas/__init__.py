@@ -1,1 +1,1 @@
-from midas_base import *
+from midas import *
