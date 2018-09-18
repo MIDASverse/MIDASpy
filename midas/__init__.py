@@ -1,1 +1,1 @@
-import midas_base.py
+import .midas_base
