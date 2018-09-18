@@ -1,1 +1,1 @@
-import .midas_base
+import . import midas_base
