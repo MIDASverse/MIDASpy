@@ -6,6 +6,10 @@ MIDAS draws on recent advances in deep learning to deliver a fast, scalable, and
 Installation
 ------------
 
+To install via pip, input the following command into the terminal:
+`pip install git+https://github.com/Oracen/MIDAS.git`
+
+
 MIDAS requires
 - Python (>=3.5, 2.X coming)
 - Numpy (>=1.5)
@@ -14,8 +18,6 @@ MIDAS requires
 - Matplotlib
 
 Tensorflow also has a number of requirements, particularly if GPU acceleration is desired. See https://www.tensorflow.org/install/ for details.
-
-Currently, installation via pip/conda is not supported. For this early period, simply download the MIDAS.py script into the project working directory and call from there.
 
 
 ALPHA 0.2
