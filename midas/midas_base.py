@@ -68,7 +68,7 @@ class Midas(object):
                output_layers= 'reversed',
                loss_scale= 1,
                init_scale= 1,
-               vae_layer= True,
+               vae_layer= False,
                individual_outputs= False,
                manual_outputs= False,
                output_structure= [16, 16, 32],
