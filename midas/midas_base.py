@@ -20,7 +20,7 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.metrics import mean_squared_error as mse
 
-class MidasImputer(object):
+class Midas(object):
   """
   Welcome, and thank you for downloading your new script! Thank you for choosing
   MIDAS, the missing-data solution of the present - today!
