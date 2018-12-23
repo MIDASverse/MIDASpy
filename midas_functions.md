@@ -114,7 +114,7 @@ Alternatively, list(df.columns.values) will output a list of column names, which
 
 This function is for integration with databasing or any dataset that needs to be batched into memory. The data sample is simply there to allow the original constructor to be recycled. The head of the data should be sufficient to build the imputation model. The input pipeline itself should pre-scale the data, and code null values as type np.nan. The pipeline ought to output a Pandas DataFrame. If additional data will be passed in, then the return must be a list of two DataFrames. The columns of the dataframe will be re-arranged so that error functions are efficiently generated.
 
-IT IS IMPERITIVE that this ordering is respected. Design the input batching function accordingly.
+IT IS IMPERATIVE that this ordering is respected. Design the input batching function accordingly.
 
 The categorical columns should be a list of column names. Softmax columns should be a list of lists of column names. This will allow the model to dynamically assign cost functions to the correct variables. If, however, the data comes pre-sorted, arranged can be set to "true", in which case the arguments can be passed in as integers of size, ie. shape[1] attributes for each of the relevant categories.
 
