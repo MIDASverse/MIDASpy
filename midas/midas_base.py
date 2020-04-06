@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.metrics import mean_squared_error as mse
-from random import seed
+import random
 
 class tfVersionError(Exception):
   pass
@@ -234,6 +234,10 @@ class Midas(object):
     self.softmax_adj = softmax_adj
     self.act = act
     self.noise_type = noise_type
+
+    if self.seed is not None:
+  	  np.random.seed(self.seed)
+  	  random.seed(self.seed)
 
   def _batch_iter(self,
                   train_data,
@@ -761,8 +765,6 @@ class Midas(object):
                            " use 'train_model_pipeline' method or rebuild model "\
                            "with in-memory dataset.")
 
-    if self.seed is not None:
-      np.random.seed(self.seed)
     feed_data = self.imputation_target.values
     na_loc = self.na_matrix.values
     with tf.Session(graph= self.graph) as sess:
