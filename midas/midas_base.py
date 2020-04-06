@@ -30,6 +30,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.metrics import mean_squared_error as mse
+from random import seed
 
 class tfVersionError(Exception):
   pass
@@ -1009,13 +1010,13 @@ class Midas(object):
                  training_epochs= 100,
                  report_ival = 10,
                  report_samples = 32,
-                 plot_all= True,
+                 plot_vars= True,
                  verbose= True,
                  verbosity_ival= 1,
                  spike_seed= 42,
                  cont_kdes = False,
                  excessive= False,
-                 plot_block = True
+                 plot_main = True
                  ):
     """
     This function spikes in additional missingness, so that known values can be
@@ -1048,7 +1049,7 @@ class Midas(object):
       In this case, the bias in the observed data may lead to inaccurate inference.
 
     It is worth visually inspecting the distribution of the overimputed values
-    against imputed values (using plot_all) to ensure that they fall within a
+    against imputed values (using plot_vars) to ensure that they fall within a
     sensible range.
 
     Args:
@@ -1077,7 +1078,7 @@ class Midas(object):
       need to be adjusted accordingly. I recommend a number between 5 and 25,
       depending on the complexity of the data.
 
-      plot_all: Generates plots of the distribution of spiked in values v. the
+      plot_vars: Generates plots of the distribution of spiked in values v. the
       mean of the imputations. Continuous values have a density plot, categorical
       values a bar plot representing proportions. Only the mean is plotted at this
       point for simplicity's sake.
@@ -1094,9 +1095,11 @@ class Midas(object):
       entire batch output to screen. This allows for inspection for unusual values
       appearing, useful if the model's accuracy will not reduce.
       
-      plot_block: Boolean. Determines whether code execution should be blocked 
-      while overimputation plot is shown (default = True). To allow code to run 
-      uninterrupted, set both plot_block AND plot_all to False.
+      plot_main: Boolean. Determines whether the main overimputation plot is shown
+      at every reporting interval (default = True). If false, plot is generated 
+      only at final report_ival. Loss values still reported each report_ival
+      in the console. To allow code to run uninterrupted, set both plot_main AND
+      plot_vars to False.
 
     """
     if not self.model_built:
@@ -1108,8 +1111,8 @@ class Midas(object):
                            " which use a pipeline function for input.")
     #These values simplify control flow used later for error calculation and
     #visualisation of convergence.
-    if cont_kdes & (plot_all == False):
-      raise ValueError("Cannot plot KDEs if plot_all is False")
+    if cont_kdes & (plot_vars == False):
+      raise ValueError("Cannot plot KDEs if plot_vars is False")
 
     if excessive:
       import time
@@ -1284,7 +1287,7 @@ class Midas(object):
             temp_spike = spike[:,break_list[n]:break_list[n+1]]
             if self.output_types[n] == 'sacc':
               temp_spike = temp_spike[:,0]
-              if plot_all:
+              if plot_vars:
                 temp_pred[temp_spike].mean().plot(kind= 'bar',
                          label= 'Imputed values (mean)', color ='C0')
                 temp_true[temp_spike].mean().plot(kind= 'bar', alpha= 0.5,
@@ -1298,7 +1301,7 @@ class Midas(object):
               agg_sacc += (1 - sacc(temp_true.values, temp_pred.values,
                                    temp_spike)) / n_softmax
             elif self.output_types[n] == 'rmse':
-              if plot_all:
+              if plot_vars:
                 for n_rmse in range(len(temp_pred.columns)):
                   plt.figure(n_rmse+1)
                   t_p = temp_pred.iloc[:,n_rmse]
@@ -1319,7 +1322,7 @@ class Midas(object):
               agg_rmse += np.sqrt(mse(temp_true[temp_spike],
                                          temp_pred[temp_spike]))
             else:
-              if plot_all:
+              if plot_vars:
                 temp_pred[temp_spike].mean().plot(kind= 'bar',
                          label= 'Imputed values',
                          color= 'C0')
@@ -1338,61 +1341,68 @@ class Midas(object):
             a_rmse.append(agg_rmse)
             print("Individual RMSE on spike-in:", single_rmse)
             print("Aggregated RMSE on spike-in:", agg_rmse)
-            plt.plot(s_rmse, 'k-', label= "Individual RMSE")
-            plt.plot(a_rmse, 'k--', label= "Aggregated RMSE")
-            min_sr = min(s_rmse)
-            min_ar = min(a_rmse)
-            plt.plot([min_sr]*len(s_rmse), 'r:')
-            plt.plot([min_ar]*len(a_rmse), 'r:')
-            plt.plot(s_rmse.index(min(s_rmse)),
-                   min_sr, 'rx')
-            plt.plot(a_rmse.index(min(a_rmse)),
-                   min_ar, 'rx')
+            
           if sacc_in:
             s_sacc.append(single_sacc)
             a_sacc.append(agg_sacc)
             print("Individual error on softmax spike-in:", single_sacc)
             print("Aggregated error on softmax spike-in:", agg_sacc)
-            plt.plot(s_sacc, 'g-', label= "Individual classification error")
-            plt.plot(a_sacc, 'g--', label= "Aggregated classification error")
-            min_ss = min(s_sacc)
-            min_as = min(a_sacc)
-            plt.plot([min_ss]*len(s_sacc), 'r:')
-            plt.plot([min_as]*len(a_sacc), 'r:')
-            plt.plot(s_sacc.index(min(s_sacc)),
-                   min_ss, 'rx')
-            plt.plot(a_sacc.index(min(a_sacc)),
-                   min_as, 'rx')
+            
           if bacc_in:
             s_bacc.append(single_bacc)
             a_bacc.append(agg_bacc)
             print("Individual error on binary spike-in:", single_bacc)
             print("Aggregated error on binary spike-in:", agg_bacc)
-            plt.plot(s_bacc, 'b-', label= "Individual binary error")
-            plt.plot(a_bacc, 'b--', label= "Aggregated binary error")
-            min_sb = min(s_bacc)
-            min_ab = min(a_bacc)
-            plt.plot([min_sb]*len(s_bacc), 'r:')
-            plt.plot([min_ab]*len(a_bacc), 'r:')
-            plt.plot(s_bacc.index(min(s_bacc)),
+
+          if plot_main or ((training_epochs - epoch) < report_ival):
+            if rmse_in:
+              plt.plot(s_rmse, 'k-', label= "Individual RMSE")
+              plt.plot(a_rmse, 'k--', label= "Aggregated RMSE")
+              min_sr = min(s_rmse)
+              min_ar = min(a_rmse)
+              plt.plot([min_sr]*len(s_rmse), 'r:')
+              plt.plot([min_ar]*len(a_rmse), 'r:')
+              plt.plot(s_rmse.index(min(s_rmse)),
+                       min_sr, 'rx')
+              plt.plot(a_rmse.index(min(a_rmse)),
+                       min_ar, 'rx')
+
+            if sacc_in:
+              plt.plot(s_sacc, 'g-', label= "Individual classification error")
+              plt.plot(a_sacc, 'g--', label= "Aggregated classification error")
+              min_ss = min(s_sacc)
+              min_as = min(a_sacc)
+              plt.plot([min_ss]*len(s_sacc), 'r:')
+              plt.plot([min_as]*len(a_sacc), 'r:')
+              plt.plot(s_sacc.index(min(s_sacc)),
+                       min_ss, 'rx')
+              plt.plot(a_sacc.index(min(a_sacc)),
+                       min_as, 'rx')
+
+            if bacc_in:
+              s_bacc.append(single_bacc)
+              a_bacc.append(agg_bacc)
+              print("Individual error on binary spike-in:", single_bacc)
+              print("Aggregated error on binary spike-in:", agg_bacc)
+              plt.plot(s_bacc, 'b-', label= "Individual binary error")
+              plt.plot(a_bacc, 'b--', label= "Aggregated binary error")
+              min_sb = min(s_bacc)
+              min_ab = min(a_bacc)
+              plt.plot([min_sb]*len(s_bacc), 'r:')
+              plt.plot([min_ab]*len(a_bacc), 'r:')
+              plt.plot(s_bacc.index(min(s_bacc)),
                    min_sb, 'rx')
-            plt.plot(a_bacc.index(min(a_bacc)),
+              plt.plot(a_bacc.index(min(a_bacc)),
                    min_ab, 'rx')
 
-          #Complete plots
-          plt.title("Overimputation error during training")
-          plt.ylabel("Error")
-          plt.legend()
-          plt.ylim(ymin= 0)
-          plt.xlabel("Reporting interval")
+            #Complete plots
+            plt.title("Overimputation error during training")
+            plt.ylabel("Error")
+            plt.legend()
+            plt.ylim(ymin= 0)
+            plt.xlabel("Reporting interval")
+            plt.show()
           
-          if not (plot_all or plot_block):
-          	plt.show(block=False)
-          else:
-          	plt.show()
-          
-      if not (plot_all or plot_block):
-          	plt.show()
       print("Overimputation complete. Adjust complexity as needed.")
       return self
 
