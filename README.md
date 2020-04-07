@@ -34,7 +34,7 @@ Key changes
 Previous versions
 -----------------
 
-Alpha 0.2:
+*Alpha 0.2:*
 
 Variational autoencoder enabled. More flexibility in model specification, although defaulting to a simple mirrored system. Deeper analysis tools within .overimpute() for checking fit on continuous values. Constructor code deconflicted. Individual output specification enabled for very large datasets.
 
@@ -53,7 +53,7 @@ Wish list:
 - Smoothing for time series (LOESS?)
 - Informative priors?
 
-Alpha 0.1:
+*Alpha 0.1:*
 
 Basic functionality feature-complete.
 - Support for mixed categorical and continuous data types
