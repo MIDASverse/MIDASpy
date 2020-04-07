@@ -1018,7 +1018,8 @@ class Midas(object):
                  spike_seed= 42,
                  cont_kdes = False,
                  excessive= False,
-                 plot_main = True
+                 plot_main = True,
+                 skip_plot = False,
                  ):
     """
     This function spikes in additional missingness, so that known values can be
@@ -1053,6 +1054,12 @@ class Midas(object):
     It is worth visually inspecting the distribution of the overimputed values
     against imputed values (using plot_vars) to ensure that they fall within a
     sensible range.
+
+    The plots block execution of the code until they are closed. To only plot a
+    single overimputation graph at the end of the run, you can supply plot_main = False
+    and plot_vars = False. To run the imputation without plotting any graphs, 
+    set skip_plot = True in addition. The overimputation function will still print
+    predicted errors to the console.
 
     Args:
       spikein: Float, between 0 and 1. The proportion of total values to remove
@@ -1102,6 +1109,11 @@ class Midas(object):
       only at final report_ival. Loss values still reported each report_ival
       in the console. To allow code to run uninterrupted, set both plot_main AND
       plot_vars to False.
+
+      skip_plot: Boolean. Stops function plotting the main overimputation graphic.
+      This feature is primarily for debugging or for where users wish to run 
+      multiple overimputations sequentially without manually closing the pyplot 
+      window.
 
     """
     if not self.model_built:
@@ -1382,10 +1394,6 @@ class Midas(object):
                        min_as, 'rx')
 
             if bacc_in:
-              s_bacc.append(single_bacc)
-              a_bacc.append(agg_bacc)
-              print("Individual error on binary spike-in:", single_bacc)
-              print("Aggregated error on binary spike-in:", agg_bacc)
               plt.plot(s_bacc, 'b-', label= "Individual binary error")
               plt.plot(a_bacc, 'b--', label= "Aggregated binary error")
               min_sb = min(s_bacc)
@@ -1398,12 +1406,15 @@ class Midas(object):
                    min_ab, 'rx')
 
             #Complete plots
-            plt.title("Overimputation error during training")
-            plt.ylabel("Error")
-            plt.legend()
-            plt.ylim(ymin= 0)
-            plt.xlabel("Reporting interval")
-            plt.show()
+            if not skip_plot:
+              plt.title("Overimputation error during training")
+              plt.ylabel("Error")
+              plt.legend()
+              plt.ylim(ymin= 0)
+              plt.xlabel("Reporting interval")
+              plt.show()
+            
+
           
       print("Overimputation complete. Adjust complexity as needed.")
       return self
