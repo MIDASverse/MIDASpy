@@ -1,5 +1,16 @@
-
-# Copyright 2018 Alex Stenlake and Ranjit Lall. All Rights Reserved.
+# ==============================================================================
+#
+#   888b     d888 8888888 8888888b.        d8888  .d8888b.  
+#   8888b   d8888   888   888  "Y88b      d88888 d88P  Y88b 
+#   88888b.d88888   888   888    888     d88P888 Y88b.      
+#   888Y88888P888   888   888    888    d88P 888  "Y888b.   
+#   888 Y888P 888   888   888    888   d88P  888     "Y88b. 
+#   888  Y8P  888   888   888    888  d88P   888       "888 
+#   888   "   888   888   888  .d88P d8888888888 Y88b  d88P 
+#   888       888 8888888 8888888P" d88P     888  "Y8888P"  
+#
+# --- Multiple Imputation using Denoising Autoencoders
+# Copyright 2020 Ranjit Lall, Alex Stenlake and Thomas Robinson. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +30,15 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.metrics import mean_squared_error as mse
+import random
+
+class tfVersionError(Exception):
+  pass
+
+if tf.__version__[0] == '2':
+  raise tfVersionError("midas v1.0 is currently only compatible with TensorFlow 1.X") 
+elif tf.__version__[0] == '1':
+  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 class Midas(object):
   """
@@ -179,7 +199,7 @@ class Midas(object):
     self.model = None
     self.additional_data = None
     self.train_batch = train_batch
-    self.seed = None
+    self.seed = seed
     self.input_is_pipeline = False
     self.input_pipeline = None
     self.vae_layer = vae_layer
@@ -214,6 +234,10 @@ class Midas(object):
     self.softmax_adj = softmax_adj
     self.act = act
     self.noise_type = noise_type
+
+    if self.seed is not None:
+  	  np.random.seed(self.seed)
+  	  random.seed(self.seed)
 
   def _batch_iter(self,
                   train_data,
@@ -306,7 +330,7 @@ class Midas(object):
 
   def build_model(self,
                 imputation_target,
-                categorical_columns= None,
+                binary_columns= None,
                 softmax_columns= None,
                 unsorted= True,
                 additional_data = None,
@@ -340,7 +364,7 @@ class Midas(object):
       and stored for the subsequent imputation process. The data must be
       preprocessed before it is passed to build_model.
 
-      categorical_columns: List of names. Specifies the binary (ie. non-exclusive
+      binary_columns: List of names. Specifies the binary (ie. non-exclusive
       categories) to be imputed. If unsorted = False, this value can be an integer
 
       softmax_columns: List of lists. Every inner list should contain column names.
@@ -379,13 +403,13 @@ class Midas(object):
 
     # Establishing indices for cost function
     size_index = []
-    if categorical_columns is not None:
+    if binary_columns is not None:
       if unsorted:
         imputation_target, chunk = self._sort_cols(imputation_target,
-                                                   categorical_columns)
+                                                   binary_columns)
         size_index.append(chunk)
       else:
-        size_index.append(categorical_columns)
+        size_index.append(binary_columns)
       cat_exists = True
     if softmax_columns is not None:
       if unsorted:
@@ -741,8 +765,6 @@ class Midas(object):
                            " use 'train_model_pipeline' method or rebuild model "\
                            "with in-memory dataset.")
 
-    if self.seed is not None:
-      np.seed(self.seed)
     feed_data = self.imputation_target.values
     na_loc = self.na_matrix.values
     with tf.Session(graph= self.graph) as sess:
@@ -990,12 +1012,14 @@ class Midas(object):
                  training_epochs= 100,
                  report_ival = 10,
                  report_samples = 32,
-                 plot_all= True,
+                 plot_vars= True,
                  verbose= True,
                  verbosity_ival= 1,
                  spike_seed= 42,
                  cont_kdes = False,
-                 excessive= False
+                 excessive= False,
+                 plot_main = True,
+                 skip_plot = False,
                  ):
     """
     This function spikes in additional missingness, so that known values can be
@@ -1028,8 +1052,14 @@ class Midas(object):
       In this case, the bias in the observed data may lead to inaccurate inference.
 
     It is worth visually inspecting the distribution of the overimputed values
-    against imputed values (using plot_all) to ensure that they fall within a
+    against imputed values (using plot_vars) to ensure that they fall within a
     sensible range.
+
+    The plots block execution of the code until they are closed. To only plot a
+    single overimputation graph at the end of the run, you can supply plot_main = False
+    and plot_vars = False. To run the imputation without plotting any graphs, 
+    set skip_plot = True in addition. The overimputation function will still print
+    predicted errors to the console.
 
     Args:
       spikein: Float, between 0 and 1. The proportion of total values to remove
@@ -1057,7 +1087,7 @@ class Midas(object):
       need to be adjusted accordingly. I recommend a number between 5 and 25,
       depending on the complexity of the data.
 
-      plot_all: Generates plots of the distribution of spiked in values v. the
+      plot_vars: Generates plots of the distribution of spiked in values v. the
       mean of the imputations. Continuous values have a density plot, categorical
       values a bar plot representing proportions. Only the mean is plotted at this
       point for simplicity's sake.
@@ -1073,6 +1103,17 @@ class Midas(object):
       excessive: Unlike .train_model()'s excessive arg, this argument prints the
       entire batch output to screen. This allows for inspection for unusual values
       appearing, useful if the model's accuracy will not reduce.
+      
+      plot_main: Boolean. Determines whether the main overimputation plot is shown
+      at every reporting interval (default = True). If false, plot is generated 
+      only at final report_ival. Loss values still reported each report_ival
+      in the console. To allow code to run uninterrupted, set both plot_main AND
+      plot_vars to False.
+
+      skip_plot: Boolean. Stops function plotting the main overimputation graphic.
+      This feature is primarily for debugging or for where users wish to run 
+      multiple overimputations sequentially without manually closing the pyplot 
+      window.
 
     """
     if not self.model_built:
@@ -1084,8 +1125,8 @@ class Midas(object):
                            " which use a pipeline function for input.")
     #These values simplify control flow used later for error calculation and
     #visualisation of convergence.
-    if cont_kdes & (plot_all == False):
-      raise ValueError("Cannot plot KDEs if plot_all is False")
+    if cont_kdes & (plot_vars == False):
+      raise ValueError("Cannot plot KDEs if plot_vars is False")
 
     if excessive:
       import time
@@ -1099,6 +1140,9 @@ class Midas(object):
         a = np.argmax(true, 1)
         b = np.argmax(pred, 1)
         return np.sum(a[spike.flatten()] == b[spike.flatten()]) / np.sum(spike)
+      def findcatname(strlist):
+        return strlist[0][:([min([x[0]==elem for elem in x]) \
+                         for x in zip(*strlist)]+[0]).index(0)]
       sacc_in = True
 
     if 'bacc' in self.output_types:
@@ -1257,43 +1301,50 @@ class Midas(object):
             temp_spike = spike[:,break_list[n]:break_list[n+1]]
             if self.output_types[n] == 'sacc':
               temp_spike = temp_spike[:,0]
-              if plot_all:
+              if plot_vars:
                 temp_pred[temp_spike].mean().plot(kind= 'bar',
-                         label= 'Predicted values', color ='C0')
+                         label= 'Imputed values (mean)', color ='C0')
                 temp_true[temp_spike].mean().plot(kind= 'bar', alpha= 0.5,
-                         color= 'r', align= 'edge', label= 'Known values')
-                plt.title('Spiked categorical proportion')
+                         color= 'r', align= 'edge', label= 'Removed observed values (mean)')
+                temp_true_name = findcatname(temp_true[temp_spike].columns)[:-1]
+                plt.title('Overimputation density plot: '+temp_true_name+' (categorical)')
+                plt.xlabel(temp_true_name)
+                plt.ylabel('Proportion')
                 plt.legend()
                 plt.show()
               agg_sacc += (1 - sacc(temp_true.values, temp_pred.values,
                                    temp_spike)) / n_softmax
             elif self.output_types[n] == 'rmse':
-              if plot_all:
+              if plot_vars:
                 for n_rmse in range(len(temp_pred.columns)):
                   plt.figure(n_rmse+1)
                   t_p = temp_pred.iloc[:,n_rmse]
                   t_t = temp_true.iloc[:,n_rmse]
                   t_s = temp_spike[:,n_rmse]
-                  t_p[t_s].plot(kind= 'density', label= 'Imputation mean')
-                  t_t[t_s].plot(kind= 'density', color= 'r', label= 'Known values')
-                  t_t.plot(kind='kde', color= 'g', label= 'Original Data')
+                  t_p[t_s].plot(kind= 'density', label= 'Imputed values (mean)')
+                  t_t[t_s].plot(kind= 'density', color= 'r', label= 'Removed observed values')
+                  t_t.plot(kind='kde', color= 'g', label= 'All observed values')
                   hyp_output = pd.concat([t_t[np.invert(t_s)], t_p[t_s]])
-                  hyp_output.plot(kind='kde', color= 'm', label = 'New Distribution')
-                  plt.title('Density plot of spiked continuous values: ' + \
-                            temp_pred.columns[n_rmse])
+                  hyp_output.plot(kind='kde', color= 'm', label = 'Completed data')
+                  plt.title('Overimputation density plot: ' + \
+                            temp_pred.columns[n_rmse] + ' (continuous)')
+                  plt.xlabel(temp_pred.columns[n_rmse])
+                  plt.ylabel('Density')
                   plt.legend()
                 plt.show()
 
               agg_rmse += np.sqrt(mse(temp_true[temp_spike],
                                          temp_pred[temp_spike]))
             else:
-              if plot_all:
+              if plot_vars:
                 temp_pred[temp_spike].mean().plot(kind= 'bar',
-                         label= 'Predicted proportions',
+                         label= 'Imputed values',
                          color= 'C0')
                 temp_true[temp_spike].mean().plot(kind= 'bar', alpha= 0.5,
-                         color= 'r', align= 'edge', label= 'Known proportions')
-                plt.title('Spiked binary proportions')
+                         color= 'r', align= 'edge', label= 'Observed values')
+                plt.title('Overimputation binary proportions')
+                plt.xlabel('Variables')
+                plt.ylabel('Proportion')
                 plt.legend()
                 plt.show()
               agg_bacc += 1 - bacc(temp_true.values, temp_pred.values, temp_spike)
@@ -1304,61 +1355,73 @@ class Midas(object):
             a_rmse.append(agg_rmse)
             print("Individual RMSE on spike-in:", single_rmse)
             print("Aggregated RMSE on spike-in:", agg_rmse)
-            plt.plot(s_rmse, 'k-', label= "Individual RMSE")
-            plt.plot(a_rmse, 'k--', label= "Aggregated RMSE")
-            min_sr = min(s_rmse)
-            min_ar = min(a_rmse)
-            plt.plot([min_sr]*len(s_rmse), 'r:')
-            plt.plot([min_ar]*len(a_rmse), 'r:')
-            plt.plot(s_rmse.index(min(s_rmse)),
-                   min_sr, 'rx')
-            plt.plot(a_rmse.index(min(a_rmse)),
-                   min_ar, 'rx')
+            
           if sacc_in:
             s_sacc.append(single_sacc)
             a_sacc.append(agg_sacc)
             print("Individual error on softmax spike-in:", single_sacc)
             print("Aggregated error on softmax spike-in:", agg_sacc)
-            plt.plot(s_sacc, 'g-', label= "Individual softmax error")
-            plt.plot(a_sacc, 'g--', label= "Aggregated softmax error")
-            min_ss = min(s_sacc)
-            min_as = min(a_sacc)
-            plt.plot([min_ss]*len(s_sacc), 'r:')
-            plt.plot([min_as]*len(a_sacc), 'r:')
-            plt.plot(s_sacc.index(min(s_sacc)),
-                   min_ss, 'rx')
-            plt.plot(a_sacc.index(min(a_sacc)),
-                   min_as, 'rx')
+            
           if bacc_in:
             s_bacc.append(single_bacc)
             a_bacc.append(agg_bacc)
             print("Individual error on binary spike-in:", single_bacc)
             print("Aggregated error on binary spike-in:", agg_bacc)
-            plt.plot(s_bacc, 'b-', label= "Individual binary error")
-            plt.plot(a_bacc, 'b--', label= "Aggregated binary error")
-            min_sb = min(s_bacc)
-            min_ab = min(a_bacc)
-            plt.plot([min_sb]*len(s_bacc), 'r:')
-            plt.plot([min_ab]*len(a_bacc), 'r:')
-            plt.plot(s_bacc.index(min(s_bacc)),
+
+          if plot_main or ((training_epochs - epoch) < report_ival):
+            if rmse_in:
+              plt.plot(s_rmse, 'k-', label= "Individual RMSE")
+              plt.plot(a_rmse, 'k--', label= "Aggregated RMSE")
+              min_sr = min(s_rmse)
+              min_ar = min(a_rmse)
+              plt.plot([min_sr]*len(s_rmse), 'r:')
+              plt.plot([min_ar]*len(a_rmse), 'r:')
+              plt.plot(s_rmse.index(min(s_rmse)),
+                       min_sr, 'rx')
+              plt.plot(a_rmse.index(min(a_rmse)),
+                       min_ar, 'rx')
+
+            if sacc_in:
+              plt.plot(s_sacc, 'g-', label= "Individual classification error")
+              plt.plot(a_sacc, 'g--', label= "Aggregated classification error")
+              min_ss = min(s_sacc)
+              min_as = min(a_sacc)
+              plt.plot([min_ss]*len(s_sacc), 'r:')
+              plt.plot([min_as]*len(a_sacc), 'r:')
+              plt.plot(s_sacc.index(min(s_sacc)),
+                       min_ss, 'rx')
+              plt.plot(a_sacc.index(min(a_sacc)),
+                       min_as, 'rx')
+
+            if bacc_in:
+              plt.plot(s_bacc, 'b-', label= "Individual binary error")
+              plt.plot(a_bacc, 'b--', label= "Aggregated binary error")
+              min_sb = min(s_bacc)
+              min_ab = min(a_bacc)
+              plt.plot([min_sb]*len(s_bacc), 'r:')
+              plt.plot([min_ab]*len(a_bacc), 'r:')
+              plt.plot(s_bacc.index(min(s_bacc)),
                    min_sb, 'rx')
-            plt.plot(a_bacc.index(min(a_bacc)),
+              plt.plot(a_bacc.index(min(a_bacc)),
                    min_ab, 'rx')
 
-          #Complete plots
-          plt.title("Spike-in error levels as training progresses")
-          plt.ylabel("Error (see documentation for details)")
-          plt.legend()
-          plt.ylim(ymin= 0)
-          plt.xlabel("Report interval")
-          plt.show()
+            #Complete plots
+            if not skip_plot:
+              plt.title("Overimputation error during training")
+              plt.ylabel("Error")
+              plt.legend()
+              plt.ylim(ymin= 0)
+              plt.xlabel("Reporting interval")
+              plt.show()
+            
 
+          
       print("Overimputation complete. Adjust complexity as needed.")
       return self
 
   def build_model_pipeline(self,
                            data_sample,
-                           categorical_columns= None,
+                           binary_columns= None,
                            softmax_columns= None,
                            unsorted= True,
                            additional_data_sample= None,
@@ -1391,7 +1454,7 @@ class Midas(object):
     'for' loop which constructs your dummy variables.
     """
     self.input_is_pipeline = True
-    c_c = categorical_columns
+    b_c = binary_columns
     s_c = softmax_columns
     us = unsorted
     a_d = additional_data_sample
@@ -1399,7 +1462,7 @@ class Midas(object):
     cea = crossentropy_adj
     l_s = loss_scale
 
-    self.build_model(data_sample, c_c, s_c, us, a_d, vb, cea, l_s)
+    self.build_model(data_sample, b_c, s_c, us, a_d, vb, cea, l_s)
 
     return self
 
@@ -1442,7 +1505,7 @@ class Midas(object):
                            "with the 'build_model_pipeline' method.")
 
     if self.seed is not None:
-      np.seed(self.seed)
+      np.random.seed(self.seed)
     with tf.Session(graph= self.graph) as sess:
       sess.run(self.init)
       if verbose:
@@ -1523,7 +1586,7 @@ class Midas(object):
                            "with the 'build_model_pipeline' method.")
 
     if self.seed is not None:
-      np.seed(self.seed)
+      np.random.seed(self.seed)
     with tf.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
       if verbose:
