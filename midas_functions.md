@@ -47,23 +47,33 @@ This class doesn't explicitly return values. Values are either stored internally
 Initialiser. Called separately to 'build_model' to allow for out-of-memory datasets. All key hyperparameters are entered at this stage, as the model construction methods only deal with the dataset.
 
 #### Args:
-- **layer_structure:** List of integers. Specifies the pattern by which the model contstruction methods will instantiate a neural network. For reference, the default layer structure is a three-layer network, with each layer containing 256 units. Larger networks can learn more complex representations of data, but also require longer and longer training times. Due to the large degree of regularisation used by MIDAS, making a model "too big" is less of a problem than making it "too small". If training time is relatively quick, but you want improved performance, try increasing the size of the layers or, as an alternative, add more layers. (More layers generally corresponds to learning more complex relationships.) As a rule of thumb, I keep the layers to powers of two - not only does this narrow my range of potential size values to search through, but apparently also helps with network assignment to memory.
+- **layer_structure:** List of integers. The number of nodes in each layer of the network (default = [256, 256, 256], denoting a three-layer network with 256 nodes per layer). Larger networks can learn more complex data structures but require longer training and are more prone to overfitting.
 
-- **learn_rate:** Float. This specifies the default learning rate behaviour for the training stage. In general, larger numbers will give faster training, smaller numbers more accurate results. If a cost is exploding (ie. increasing rather than decreasing), then the first solution tried ought to be reducing the learning rate.
+- **learn_rate:** Float. The learning rate $\gamma$ (default = 0.0001), which controls the size of the weight adjustment in each training epoch. In general, higher values reduce training time at the expense of less accurate results.
 
-- **input_drop:** Float between 0 and 1. The 'keep' probability of each input column per training batch. A higher value will allow more data into MIDAS per draw, while a lower number seems to render the aggregated posterior more robust to bias from the data. (This effect will require further investigation, but the central tendency of the posterior seems to fall closer to the true value.) Empirically, a number between 0.7 and 0.95 works best. Numbers close to 1 reduce or eliminate the regularising benefits of input noise, as well as converting the model to a simple neural network regression.
+- **input_drop:** Float between 0 and 1. The probability of corruption for input columns in training mini-batches (default = 0.8). Higher values increase training time but reduce the risk of overfitting. In our experience, values between 0.7 and 0.95 deliver the best performance.
 
-- **train_batch:** Integer. The batch size of each training pass. Larger batches mean more stable loss, as biased sampling is less likely to present an issue. However, the noise generated from smaller batches, as well as the greater number of training updates per epoch, allows the algorithm to converge to better optima. Research suggests the ideal number lies between 8 and 512 observations per batch. I've found that 16 seems to be ideal, and would only consider reducing it on enormous datasets where memory management is a concern.
+- **train_batch:** Integer. The number of observations in training mini-batches (default = 16). Common choices are 8, 16, 32, 64, and 128; powers of 2 tend to enhance memory efficiency. In general, smaller sizes lead to faster convergence at the cost of greater noise and thus less accurate estimates of the error gradient. Where memory management is a concern, they should be favored.
 
-- **savepath:** String. Specifies the location to which Tensorflow will save the trained model.
+- **savepath:** String. The location to which the trained model will be saved.
 
-- **seed:** Integer. Initialises the pseudorandom number generator to a set value. Important if you want your results to be reproducible.
+- **seed:** Integer. The value to which Python's pseudo-random number generator is initialized. This enables users to ensure that data shuffling, weight and bias initialization, and missingness indicator vectors are reproducible.
 
-- **loss_scale:** Float. Instantiates a constant to multiply the loss function by. If there are a large number of losses, this is a method that can be used to attempt to prevent overtraining while also allowing for a larger learning rate. With general SGD, this would be equivalent to a modifier of the learn rate, but this interacts differently with AdaM due to its adaptive learn rate. Useful only in some circumstances.
+- **loss_scale:** Float. A constant by which the RMSE loss functions are multiplied (default = 1). This hyperparameter performs a similar function to the learning rate. If loss during training is very large, increasing its value can help to prevent overtraining.
 
-- **init_scale:** Float. MIDAS is initialised with a variant of Xavier initialisation, where a numerator of 1 is used instead of a 6. For deeper networks, larger values might be useful to prevent dying gradients - although with ELU activations, this is less of a concern. Can be reduced if early training is characterised by exploding gradients.
+- **init_scale:** Float. The numerator of the variance component of Xavier Initialisation equation (default = 1). In very deep networks, higher values may help to prevent extreme gradients (though this problem is less common with ELU activation functions).
 
-- **softmax_adj:** Float. As categorical clusters each require its own softmax cost function, they quickly outnumber the other variables. Should continuous or binary variables not train well, while softmax error is smoothly decreasing, try using a number less than 1 to scale the loss of the softmaxes down. A useful rule of thumb seems to be 1/(number of softmaxes) to use the averaged softmax loss.
+- **softmax_adj:** Float. A constant by which the cross-entropy loss functions are multiplied (default = 1). This hyperparameter is the equivalent of loss_scale for categorical variables. If cross-entropy loss falls at a consistently faster rate than RMSE during training, a lower value may help to redress this imbalance.
+
+- **vae_layer:** Boolean. Specifies whether to include a variational autoencoder layer in the network (default = False), one of the key diagnostic tools included in midas. If set to True, variational autoencoder hyperparameters must be specified via a number of additional arguments.
+
+- **latent_space_size:** Integer. The number of normal dimensions used to parameterize the latent space.
+
+- **vae_sample_var:** Float. The sampling variance of the normal distributions used to parameterize the latent space.
+
+- **vae_alpha:** Float. The strength of the prior imposed on the Kullback-Leibler divergence term in the variational autoencoder loss functions.
+
+- **kld_min:**  Float. The minimum value of the Kullback-Leibler divergence term in the variational autoencoder loss functions.
 
 ---
 
@@ -87,17 +97,17 @@ In other words, if you're experienced at using MIDAS and understand how its inde
 Alternatively, list(df.columns.values) will output a list of column names, which can be easily implemented in the 'for' loop which constructs your dummy variables.
 
 #### Args:
-- **imputation_target:** DataFrame. Any data specified here will be rearranged and stored for the subsequent imputation process. The data must be preprocessed before it is passed to build_model.
+- **imputation_target:** DataFrame. The name of the incomplete input dataset. Upon being read in, the dataset will be appropriately formatted and stored for training.
 
-- **categorical_columns:** List of names. Specifies the binary (ie. non-exclusive categories) to be imputed. If unsorted = False, this value can be an integer
+- **binary_columns:** List of names. A list of  all binary variables in the input dataset.
 
-- **softmax_columns:** List of lists. Every inner list should contain column names. Each inner list should represent a set of mutually exclusive categories, such as current day of the week. if unsorted = False, this should be a list of integers.
+- **softmax_columns:** List of lists. The outer list should include all non-binary categorical variables in the input dataset. Each inner list should contain the mutually exclusive set of possible classes for each of these variables.
 
-- **unsorted:** Boolean. Specifies to MIDAS that data has been pre-sorted, and indices can simply be appended to the size index.
+- **unsorted:** Boolean. Specifies whether the input dataset has been pre-ordered in terms of variable type (default = True, denoting no sorting). If set to False, binary_columns and softmax_columns should be a list of integers denoting shape attributes for each category.
 
-- **additional_data:** DataFrame. Any data that shoud be included in the imputation model, but is not required from the output. By passing data here, the data will neither be rearranged nor will it generate a cost function. This reduces the regularising effects of multiple loss functions, but reduces both networksize requirements and training time.
+- **additional_data:** DataFrame. Data that should be included in the imputation model but are not required for later analyses. Such data will not be formatted, rearranged, or included in the loss functions, reducing training time.
 
-- **verbose:** Boolean. Set to False to suppress messages printing to terminal.
+- **verbose:** Boolean. Specifies whether to print messages to the terminal (default = True).
 
 ---
 
@@ -162,23 +172,27 @@ It is worth visually inspecting the distribution of the overimputed values again
 
 #### Args:
 
-- **spikein:** Float, between 0 and 1. The proportion of total values to remove from the dataset at random. As this is a random selection, the sample should be representative. It should also equally capture known and missing values, therefore this sample represents the percentage of known data to remove. If concerns about sampling remain, adjusting this number or changing the seed can allow for validation. Larger numbers mean greater amounts of removed data, which may mean estimates of optimal training time might be skewed. This can be resolved by lowering the learning rate and aiming for a window.
+- **spikein:** Float, between 0 and 1. The proportion of observed values in the input dataset to be randomly removed (default = 0.1).
 
-- **training_epochs:** Integer. Specifies the number of epochs model should be trained for. It is often worth specifying longer than expected to ensure that the model does not overtrain, or that another, better, optimum exists given slightly longer training time.
+- **training_epochs:** Integer. The number of overimputation training epochs (default = 100). Selecting a low value increases the risk that trends in the loss metrics have not stabilized by the end of training, in which case additional epochs may be necessary.
 
-- **report_ival:** Integer. The interval between sampling from the posterior of the model. Smaller intervals mean a more granular view of convergence, but also drastically slow training time.
+- **report_ival:** Integer. The number of overimputation training epochs between calculations of loss (default = 10). Shorter intervals provide a more granular view of model performance but slow down the overimputation process.
 
-- **report_samples:** The number of Monte-Carlo samples drawn for each check of the posterior at report_ival. Greater numbers of samples means a longer runtime for overimputation. For low numbers of samples, the impact will be reduced, though for large numbers of Monte-Carlo samples, report_ival will need to be adjusted accordingly. I recommend a number between 5 and 25, depending on the complexity of the data.
+- **report_samples:** The number of Monte Carlo samples drawn from the estimated missing-data posterior for loss calculations (default = 32). A larger number increases overimputation runtime and may thus necessitate a lower value of report_ival.
 
-- **plot_all:** Generates plots of the distribution of spiked in values v. the mean of the imputations. Continuous values have a density plot, categorical values a bar plot representing proportions. Only the mean is plotted at this point for simplicity's sake.
+- **plot_vars:** Boolean. Specifies whether to plot the distribution of original versus overimputed values (default = True). This takes the form of a density plot for continuous variables and a barplot for categorical variables (showing proportions of each class).
 
-- **verbose:** Boolean. Prints out messages, including loss
+- **plot_main:** Boolean. Specifies whether to display the main graphical output (overimputation error during training) at every reporting interval (default = True). If set to False, it will only appear at the end of the overimputation training process. Error values are still shown at each report_ival.
 
-- **verbosity_ival:** Integer. This number determines the interval between messages.
+- **skip_plot:** Boolean. Specifies whether to suppress the main graphical output (default = False). This may be desirable when users are conducting multiple overimputation exercises sequentially and are primarily interested in the console output.
 
-- **spike_seed:** A different seed, separate to the one used in the main call, used to initialise the RNG for the missingness spike-in.
+- **verbose:** Boolean. Prints out messages, including loss, to the terminal (default = True).
 
-- **excessive:** Unlike .train_model()'s excessive arg, this argument prints the entire batch output to screen. This allows for inspection for unusual values appearing, useful if the model's accuracy will not reduce.
+- **verbosity_ival:** Integer. The number of overimputation training epochs between messages (default = True).
+
+- **spike_seed:** Integer. The value to which Python's pseudo-random number generator is initialized for the missingness spike-in. This is separate to the seed specified in the Midas() call.
+
+- **excessive:** Boolean. Specifies whether to print aggregate mini-batch loss to the terminal (default = False). This argument differs from the .train\_model()'s excessive argument, which prints individual mini-batch loss. This allows users to check for unusual imputations, which may be helpful if loss is not declining during overimputation training.
 
 ---
 
@@ -193,13 +207,13 @@ This is the standard method for optimising the model's parameters. Must be calle
 
 #### Args:
 
-- **training_epochs:** Integer. Number of complete cycles through training dataset.
+- **training_epochs:** Integer. The number of complete cycles (forward passes) through the network during training (default = 100).
 
-- **verbose:** Boolean. Prints out messages, including loss
+- **verbose:** Boolean. Specifies whether to print messages to the terminal during training, including loss values (default = True).
 
-- **verbosity_ival:** Integer. This number determines the interval between messages.
+- **verbosity_ival:** Integer. The number of training epochs between messages (default = 1).
 
-- **excessive:** Boolean. Used for troubleshooting, this argument will cause the cost of each minibatch to be printed to the terminal.
+- **excessive:** Boolean. Specifies whether to print loss for each mini-batch to the terminal (default = False), which can help with troubleshooting.
 
 ---
 
@@ -279,9 +293,9 @@ Method used to generate a set of m imputations to the .output_list attribute. Im
 If a model has been pre-trained, on subsequent runs this function can be directly called without having to train first. An 'if' statement checking the default save location is useful for this.
 
 #### Args:
-- **m:** Integer. Number of imputations to generate.
+- **m:** Integer. The number of completed datasets to produce (default = 50)
 
-- **verbose:** Boolean. Prints out messages.
+- **verbose:** Boolean. Specifies whether to print messages to the terminal (default = True).
 
 ---
 
