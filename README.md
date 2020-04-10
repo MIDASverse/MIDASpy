@@ -1,4 +1,4 @@
-# MIDAS - Multiple Imputation with Denoising Autoencoders
+# MIDAS (Multiple Imputation with Denoising Autoencoders)
 
 MIDAS draws on recent advances in deep learning to deliver a fast, scalable, and high-performance solution for multiply imputing missing data. MIDAS employs a class of unsupervised neural networks known as denoising autoencoders, which are capable of producing complex yet robust reconstructions of partially corrupted inputs. To enhance their efficiency and accuracy while preserving their robustness, these networks are trained with the recently developed technique of Monte Carlo dropout, which is mathematically equivalent to approximate Bayesian inference in deep Gaussian processes. MIDAS enables researchers to multiply impute larger datasets than is possible with existing multiple imputation algorithms, and does efficiently and accurately.
 
