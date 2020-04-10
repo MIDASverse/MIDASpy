@@ -9,8 +9,8 @@
 #   888   "   888   888   888  .d88P d8888888888 Y88b  d88P 
 #   888       888 8888888 8888888P" d88P     888  "Y8888P"  
 #
-# --- Multiple Imputation using Denoising Autoencoders
-# Copyright 2020 Ranjit Lall, Alex Stenlake and Thomas Robinson. All Rights Reserved.
+# --- Multiple Imputation with Denoising Autoencoders
+# Copyright 2020 Ranjit Lall, Alex Stenlake, and Thomas Robinson. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,42 +41,6 @@ elif tf.__version__[0] == '1':
   tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 class Midas(object):
-  """
-  Welcome, and thank you for downloading your new script! Thank you for choosing
-  MIDAS, the missing-data solution of the present - today!
-
-  Japes aside, a few points to note.
-
-  For now, all input must take the form of a Pandas DataFrame. Pandas is the only
-  library with the kind of flexible indexing that I required. While it might not
-  be as fast as a pure Numpy-based solution, it is still quite fast - and allows
-  for mask-based indexing and reindexing.
-
-  All categorical variables have to be converted to onehot before the algorithm
-  can process anything. I might integrate this process into the workflow later,
-  should pandas get a reverse_dummies function that would allow the reverse
-  transform. This will also change when I implement embedding for sparse variables.
-
-  Neural networks are unpredictable models, where things as small as scaling method
-  may have major implications for inference. Try to scale to between 0 and 1, or
-  between -1 and 1, as this will help the weight updates be more gradual (and thus
-  the learned representation will be more accurate). By the same token, feel
-  free to experiment.
-
-  The general form of a call to MIDAS takes the following form:
-
-    imputer.build_model(data)
-    imputer.generate_samples()
-    for dataset in imputer.output_list:
-      print(dataset)
-
-  Of course, the specifics of how the data are generated and accessed depends on
-  the intended application.
-
-  Feedback, contributions and criticism equally welcomed.
-
-  https://github.com/Oracen/MIDAS
-  """
 
   def __init__(self,
                layer_structure= [256, 256, 256],
