@@ -25,7 +25,7 @@ Minor, mainly cosmetic, changes to the underlying source code.
 
 Key changes
 - Renamed 'categorical_columns' argument in build_model() to 'binary_columns' to avoid confusion
-- Added 'plot_block' argument (boolean) in overimputation() method to allow code to continue while plots are shown
+- Added plotting arguments to overimputation() method to suppress intermediary overimputation plots (plot_main) and all plots (skip_plot).
 - Changed overimputation() plot titles, labels and legends
 - Added tensorflow 2.0 version check on import, returns custom error
 - Fixed seed-setting bug in earlier versions
