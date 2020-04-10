@@ -76,10 +76,10 @@ class Midas(object):
     Args:
       layer_structure: List of integers. The number of nodes in each layer of the
       network (default = [256, 256, 256], denoting a three-layer network with 256
-      nodes per layer). Larger networks can learn more complex data structures but
+      nodes per layer). Larger networks can learn more complex data structures but 
       require longer training and are more prone to overfitting.
 
-      learn_rate: Float. The learning rate $\gamma$ (default = 0.0001), which 
+      learn_rate: Float. The learning rate (gamma; default = 0.0001), which 
       controls the size of the weight adjustment in each training epoch. In general,
       higher values reduce training time at the expense of less accurate results.
 
@@ -96,7 +96,7 @@ class Midas(object):
 
       savepath: String. The location to which the trained model will be saved.
 
-      seed: Integer. The value to which \proglang{Python}'s pseudo-random number 
+      seed: Integer. The value to which Python's pseudo-random number 
       generator is initialized. This enables users to ensure that data shuffling,
       weight and bias initialization, and missingness indicator vectors are 
       reproducible.
@@ -106,10 +106,9 @@ class Midas(object):
       rate. If loss during training is very large, increasing its value can help to 
       prevent overtraining.
 
-      init_scale: Float. The numerator of the variance component of 
-      Equation \ref{eq:xavier} (default = 1). In very deep networks, higher values may
-      help to prevent extreme gradients (though this problem is less common with ELU 
-      activation functions).
+      init_scale: Float. The numerator of the variance component of Xavier Initialisation 
+      equation (default = 1). In very deep networks, higher values may help to prevent 
+      extreme gradients (though this problem is less common with ELU activation functions).
 
       softmax_adj: Float. A constant by which the cross-entropy loss functions are 
       multiplied (default = 1). This hyperparameter is the equivalent of loss_scale
