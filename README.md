@@ -2,7 +2,7 @@
 
 MIDAS is a Python class for multiply imputing missing values based on neural network methods that is particularly well suited to large and complex data. The software implements a new approach to multiple imputation that involves introducing an additional portion of missingness into the dataset, attempting to reconstruct this portion with a type of unsupervised neural network known as a denoising autoencoder, and using the resulting model to draw imputations of originally missing values. These steps are implemented with a fast, scalable, and flexible algorithm that expands both the quantity and the range of data that can be analyzed with multiple imputation. To help users optimize the algorithm for their specific application, MIDAS offers a variety of user-friendly tools for calibrating and validating the imputation model.
 
-For an R-implementation, see our **rMIDAS** repository [here](https://github.com/tsrobinson/rMIDAS).
+For a R package implementation, see our **rMIDAS** repository [here](https://github.com/tsrobinson/rMIDAS).
 
 **NOTE**: An earlier version of MIDAS is stored [here](https://github.com/Oracen/MIDAS).
 
