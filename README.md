@@ -42,8 +42,13 @@ For a R package implementation, see our **rMIDAS** repository
 To install via pip, input the following command into the terminal:  
 `pip install git+https://github.com/ranjitlall/MIDAS.git`
 
-MIDAS requires - Python (\>=3.5) - Numpy (\>=1.5) - Pandas (\>=0.19) -
-Tensorflow (\>= 1.10; 2.X coming) - Matplotlib
+MIDAS requires:
+
+  - Python (\>=3.5)
+  - Numpy (\>=1.5)
+  - Pandas (\>=0.19)
+  - Tensorflow (\>= 1.10; 2.X coming)
+  - Matplotlib
 
 Tensorflow also has a number of requirements, particularly if GPU
 acceleration is desired. See <https://www.tensorflow.org/install/> for
@@ -53,13 +58,16 @@ details.
 
 Minor, mainly cosmetic, changes to the underlying source code.
 
-Key changes - Renamed ‘categorical\_columns’ argument in build\_model()
-to ‘binary\_columns’ to avoid confusion - Added plotting arguments to
-overimputation() method to suppress intermediary overimputation plots
-(plot\_main) and all plots (skip\_plot). - Changed overimputation() plot
-titles, labels and legends - Added tensorflow 2.0 version check on
-import, returns custom error - Fixed seed-setting bug in earlier
-versions
+Key changes:
+
+  - Renamed ‘categorical\_columns’ argument in build\_model() to
+    ‘binary\_columns’ to avoid confusion
+  - Added plotting arguments to overimputation() method to suppress
+    intermediary overimputation plots (plot\_main) and all plots
+    (skip\_plot).
+  - Changed overimputation() plot titles, labels and legends
+  - Added tensorflow 2.0 version check on import, returns custom error
+  - Fixed seed-setting bug in earlier versions
 
 ## Previous versions
 
@@ -71,22 +79,34 @@ analysis tools within .overimpute() for checking fit on continuous
 values. Constructor code deconflicted. Individual output specification
 enabled for very large datasets.
 
-Key added features - Variational autoencoder capacity added, including
-encoding to and sampling from latent space
+Key added features:
 
-Planned features: - Time dependence handling through recurrent cells -
-Improving the pipeline methods for very large datasets - Tensorboard
-integration - Dropout scaling - A modified constructor that can generate
-embeddings for better interpolation of features - R support
+  - Variational autoencoder capacity added, including encoding to and
+    sampling from latent space
 
-Wish list: - Smoothing for time series (LOESS?) - Informative priors?
+Planned features:
+
+  - Time dependence handling through recurrent cells
+  - Improving the pipeline methods for very large datasets
+  - Tensorboard integration
+  - Dropout scaling
+  - A modified constructor that can generate embeddings for better
+    interpolation of features
+  - R support
+
+Wish list:
+
+  - Smoothing for time series (LOESS?)
+  - Informative priors?
 
 *Alpha 0.1:*
 
-Basic functionality feature-complete. - Support for mixed categorical
-and continuous data types - An “additional data” pipeline, allowing data
-that may be relevant to the imputation to be included (without being
-included in error generating statistics) - Simplified calibration for
-model complexity through the “overimputation” function, including
-visualization of reconstructed features - Basic large dataset
-functionality
+  - Basic functionality feature-complete.
+  - Support for mixed categorical and continuous data types
+  - An “additional data” pipeline, allowing data that may be relevant to
+    the imputation to be included (without being included in error
+    generating statistics)
+  - Simplified calibration for model complexity through the
+    “overimputation” function, including visualization of
+    reconstructed features
+  - Basic large dataset functionality
