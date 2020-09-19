@@ -40,7 +40,7 @@ For a R package implementation, see our **rMIDAS** repository
 ## Installation
 
 To install via pip, input the following command into the terminal:  
-`pip install git+https://github.com/ranjitlall/MIDAS.git`
+`pip install git+https://github.com/MIDASverse/pyMIDAS.git`
 
 MIDAS requires:
 
