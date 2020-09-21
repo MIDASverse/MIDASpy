@@ -1,0 +1,10 @@
+README.md
+setup.cfg
+setup.py
+pyMIDAS/__init__.py
+pyMIDAS/midas_base.py
+pyMIDAS.egg-info/PKG-INFO
+pyMIDAS.egg-info/SOURCES.txt
+pyMIDAS.egg-info/dependency_links.txt
+pyMIDAS.egg-info/requires.txt
+pyMIDAS.egg-info/top_level.txt

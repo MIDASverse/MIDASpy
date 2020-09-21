@@ -8,7 +8,7 @@ setup(name='pyMIDAS',
       url= 'http://github.com/ranjitlall/MIDAS',
       author= 'Ranjit Lall, Alex Stenlake, and Thomas Robinson',
       author_email= 'R.Lall@lse.ac.uk',
-      download_url = 'https://github.com/MIDASverse/pyMIDAS/archive/v1.0.1.tar.gz',
+      download_url = 'https://github.com/MIDASverse/pyMIDAS/releases/download/v1.0.1/pyMIDAS-1.0.1.tar.gz',
       keywords = ['multiple imputation','neural networks','tensorflow'],
       install_requires=[
       	'tensorflow',
