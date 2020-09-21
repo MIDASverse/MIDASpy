@@ -49,7 +49,7 @@ Tensorflow also has a number of requirements, particularly if GPU acceleration i
 Version 1.0.1 (September 2020)
 ---------
 
-*v1.0.1 is a minor patch to allow for packaging to PyPi.*
+*v1.0.1 is a minor patch to allow for packaging to PyPi, and updates the package name to pyMIDAS.*
 
 Key changes in 1.0:
 

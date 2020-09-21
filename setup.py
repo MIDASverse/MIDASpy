@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
-setup(name='midas',
-	  packages=['midas'],
+setup(name='pyMIDAS',
+	  packages=['pyMIDAS'],
       version= '1.0.1',
       licence= 'Apache',
       description= 'Implementation of Multiple Imputation using Denoising Autoencoders',

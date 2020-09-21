@@ -40,7 +40,7 @@ For a R package implementation, see our **rMIDAS** repository
 ## Installation
 
 To install via pip, input the following command into the terminal:  
-`pip install git+https://github.com/MIDASverse/MIDAS.git`
+`pip install git+https://github.com/MIDASverse/pyMIDAS.git`
 
 MIDAS requires:
 
@@ -56,7 +56,7 @@ details.
 
 ## Version 1.0.1 (September 2020)
 
-*v1.0.1 is a minor patch to allow for packaging to PyPi.*
+*v1.0.1 is a minor patch to allow for packaging to PyPi, and updates the package name to pyMIDAS.*
 
 Key changes in 1.0:
 
