@@ -1,0 +1,6 @@
+tensorflow
+numpy
+matplotlib
+scikit-learn
+pandas
+random
