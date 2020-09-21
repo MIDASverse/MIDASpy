@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# pyMIDAS<img src='pyMIDAS_logo.png' align="right" height="139" /></a>
+# MIDASpy<img src='MIDASpy_logo.png' align="right" height="139" /></a>
 
 <!-- badges: start -->
 
@@ -40,7 +40,7 @@ For a R package implementation, see our **rMIDAS** repository
 ## Installation
 
 To install via pip, input the following command into the terminal:  
-`pip install git+https://github.com/MIDASverse/pyMIDAS.git`
+`pip install git+https://github.com/MIDASverse/MIDASpy.git`
 
 MIDAS requires:
 
@@ -56,7 +56,8 @@ details.
 
 ## Version 1.0.1 (September 2020)
 
-*v1.0.1 is a minor patch to allow for packaging to PyPi, and updates the package name to pyMIDAS.*
+*v1.0.1 is a minor patch to allow for packaging to PyPi, and updates the
+package name to MIDASpy*
 
 Key changes in 1.0:
 

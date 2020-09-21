@@ -12,7 +12,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# pyMIDAS<img src='pyMIDAS_logo.png' align="right" height="139" /></a>
+# MIDASpy<img src='MIDASpy_logo.png' align="right" height="139" /></a>
 
 <!-- badges: start -->
 <!-- [![CRAN status](https://www.r-pkg.org/badges/version/dplyr)](https://cran.r-project.org/package=dplyr) -->
@@ -33,7 +33,7 @@ Installation
 ------------
 
 To install via pip, input the following command into the terminal:  
-`pip install git+https://github.com/MIDASverse/MIDAS.git`
+`pip install git+https://github.com/MIDASverse/MIDASpy.git`
 
 
 MIDAS requires:
@@ -49,7 +49,7 @@ Tensorflow also has a number of requirements, particularly if GPU acceleration i
 Version 1.0.1 (September 2020)
 ---------
 
-*v1.0.1 is a minor patch to allow for packaging to PyPi, and updates the package name to pyMIDAS.*
+*v1.0.1 is a minor patch to allow for packaging to PyPi, and updates the package name to MIDASpy*
 
 Key changes in 1.0:
 
