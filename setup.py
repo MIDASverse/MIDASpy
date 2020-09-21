@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(name='midas',
 	  packages=['midas'],
-      version= '1.1',
+      version= '1.0.1',
       licence= 'Apache',
       description= 'Implementation of Multiple Imputation using Denoising Autoencoders',
       url= 'http://github.com/ranjitlall/MIDAS',

@@ -17,7 +17,7 @@
 
 ## Overview
 
-pyMIDAS is a Python class for multiply imputing missing values based on
+MIDAS is a Python class for multiply imputing missing values based on
 neural network methods that is particularly well suited to large and
 complex data. The software implements a new approach to multiple
 imputation that involves introducing an additional portion of
@@ -40,7 +40,7 @@ For a R package implementation, see our **rMIDAS** repository
 ## Installation
 
 To install via pip, input the following command into the terminal:  
-`pip install git+https://github.com/MIDASverse/pyMIDAS.git`
+`pip install git+https://github.com/MIDASverse/MIDAS.git`
 
 MIDAS requires:
 
@@ -54,12 +54,13 @@ Tensorflow also has a number of requirements, particularly if GPU
 acceleration is desired. See <https://www.tensorflow.org/install/> for
 details.
 
-## Version 1.0 (April 2020)
+## Version 1.0.1 (September 2020)
 
-Minor, mainly cosmetic, changes to the underlying source code.
+*v1.0.1 is a minor patch to allow for packaging to PyPi.*
 
-Key changes:
+Key changes in 1.0:
 
+  - Minor, mainly cosmetic, changes to the underlying source code.
   - Renamed ‘categorical\_columns’ argument in build\_model() to
     ‘binary\_columns’ to avoid confusion
   - Added plotting arguments to overimputation() method to suppress

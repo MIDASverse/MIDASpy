@@ -46,16 +46,14 @@ MIDAS requires:
 
 Tensorflow also has a number of requirements, particularly if GPU acceleration is desired. See https://www.tensorflow.org/install/ for details.
 
-Version 1.1 (September 2020)
+Version 1.0.1 (September 2020)
 ---------
 
-Minor configuration changes to allow for packaging to PyPi.
+*v1.0.1 is a minor patch to allow for packaging to PyPi.*
 
-### Version 1.0
-Minor, mainly cosmetic, changes to the underlying source code.
+Key changes in 1.0:
 
-Key changes:
-
+* Minor, mainly cosmetic, changes to the underlying source code.
 * Renamed 'categorical_columns' argument in build_model() to 'binary_columns' to avoid confusion
 * Added plotting arguments to overimputation() method to suppress intermediary overimputation plots (plot_main) and all plots (skip_plot).
 * Changed overimputation() plot titles, labels and legends
