@@ -46,8 +46,12 @@ MIDAS requires:
 
 Tensorflow also has a number of requirements, particularly if GPU acceleration is desired. See https://www.tensorflow.org/install/ for details.
 
-Version 1.0 (April 2020)
+Version 1.1 (September 2020)
 ---------
+
+Minor configuration changes to allow for packaging to PyPi.
+
+### Version 1.0
 Minor, mainly cosmetic, changes to the underlying source code.
 
 Key changes:
