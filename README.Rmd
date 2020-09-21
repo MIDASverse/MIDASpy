@@ -33,23 +33,25 @@ Installation
 ------------
 
 To install via pip, input the following command into the terminal:  
-`pip install git+https://github.com/MIDASverse/MIDASpy.git`
+`pip install MIDASpy`
 
+The latest development version (potentially unstable) can be installed via the terminal with:
+`pip install git+https://github.com/MIDASverse/MIDASpy.git`
 
 MIDAS requires:
 
 * Python (>=3.5)
 * Numpy (>=1.5)
 * Pandas (>=0.19)
-* Tensorflow (>= 1.10; 2.X coming)
+* Tensorflow (>= 1.10) -- **NOTE**: 2.X is not yet supported for performing imputations
 * Matplotlib
 
 Tensorflow also has a number of requirements, particularly if GPU acceleration is desired. See https://www.tensorflow.org/install/ for details.
 
-Version 1.0.1 (September 2020)
+Version 1.0.2 (September 2020)
 ---------
 
-*v1.0.1 is a minor patch to allow for packaging to PyPi, and updates the package name to MIDASpy*
+*v1.0.2 patches MIDASpy to allow for packaging to PyPi, and updates the package name.*
 
 Key changes in 1.0:
 

@@ -1,6 +1,5 @@
-tensorflow
-numpy
-matplotlib
+tensorflow>=1.10
+numpy>=1.5
 scikit-learn
-pandas
-random
+matplotlib
+pandas>=0.19
