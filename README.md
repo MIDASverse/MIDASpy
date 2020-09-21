@@ -17,7 +17,7 @@
 
 ## Overview
 
-MIDAS is a Python class for multiply imputing missing values based on
+MIDASpy is a Python class for multiply imputing missing values based on
 neural network methods that is particularly well suited to large and
 complex data. The software implements a new approach to multiple
 imputation that involves introducing an additional portion of
