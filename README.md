@@ -26,7 +26,7 @@ For an implementation in R, see our **rMIDAS** repository
 
 For more information on the MIDAS method, see:
 
-Lall, Ranjit, and Thomas Robinson. 2020. “Applying the MIDAS Touch: How to Handle Missing Values in Large and Complex Data.” APSA Preprints. doi: 10.33774/apsa-2020-3tk40-v3.
+Lall, Ranjit, and Thomas Robinson. 2020. “Applying the MIDAS Touch: How to Handle Missing Values in Large and Complex Data.” APSA Preprints. doi: [10.33774/apsa-2020-3tk40-v3](https://preprints.apsanet.org/engage/apsa/article-details/5e86309dc1eefd001adeb780).
 
 ## Installation
 
