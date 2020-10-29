@@ -50,6 +50,10 @@ Tensorflow also has a number of requirements, particularly if GPU
 acceleration is desired. See <https://www.tensorflow.org/install/> for
 details.
 
+## Example
+
+For a simple demonstration of **MIDASpy**, see [this](https://github.com/MIDASverse/MIDASpy/blob/master/Examples/midas_demo.ipynb) page. 
+
 ## Version 1.0.2 (September 2020)
 
 *v1.0.2 patches MIDASpy to allow for packaging to PyPi, and updates the
