@@ -3,3 +3,5 @@ numpy>=1.5
 scikit-learn
 matplotlib
 pandas>=0.19
+os
+tensorflow_addons>=0.11
