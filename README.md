@@ -17,25 +17,26 @@
 
 ## Overview
 
-MIDASpy is a Python class for multiply imputing missing values based on
-neural network methods that is particularly well suited to large and
-complex data. The software implements a new approach to multiple
-imputation that involves introducing an additional portion of
-missingness into the dataset, attempting to reconstruct this portion
-with a type of unsupervised neural network known as a denoising
-autoencoder, and using the resulting model to draw imputations of
-originally missing values. These steps are implemented with a fast,
-scalable, and flexible algorithm that expands both the quantity and the
-range of data that can be analyzed with multiple imputation. To help
-users optimize the algorithm for their specific application, MIDAS
-offers a variety of user-friendly tools for calibrating and validating
-the imputation model.
+**MIDASpy** is a Python class for multiply imputing missing data using
+MIDAS, a deep learning method based on denoising autoencoder neural
+networks. The **MIDASpy** algorithm offers significant accuracy and
+efficiency advantages over other multiple imputation strategies,
+particularly when applied to large datasets with complex features. In
+addition to implementing the algorithm, the class contains functions for
+processing data before and after model training, running imputation
+model diagnostics, generating multiple completed datasets, and
+estimating regression models on these datasets.
 
-For a R package implementation, see our **rMIDAS** repository
+For an implementation in R, see our **rMIDAS** repository
 [here](https://github.com/MIDASverse/rMIDAS).
 
-**NOTE**: An earlier version of MIDAS is stored
-[here](https://github.com/Oracen/MIDAS).
+## Background on MIDAS
+
+For more information on the MIDAS method, see:
+
+Lall, Ranjit, and Thomas Robinson. 2020. “Applying the MIDAS Touch: How
+to Handle Missing Values in Large and Complex Data.” APSA Preprints.
+<https://doi.org/10.33774/apsa-2020-3tk40-v3>
 
 ## Installation
 
@@ -51,13 +52,31 @@ MIDAS requires:
   - Python (\>=3.5)
   - Numpy (\>=1.5)
   - Pandas (\>=0.19)
-  - Tensorflow (\>= 1.10) – **NOTE**: 2.X is not yet supported for
-    performing imputations
+  - Tensorflow (\>= 1.10) – **TensorFlow 2.X now fully supported**
   - Matplotlib
+  - TensorFlow Addons (\>=0.11 if using Tensorflow \>= 2.0)
 
 Tensorflow also has a number of requirements, particularly if GPU
 acceleration is desired. See <https://www.tensorflow.org/install/> for
 details.
+
+## Example
+
+For a simple demonstration of **MIDASpy**, see
+[this](https://github.com/MIDASverse/MIDASpy/blob/master/Examples/midas_demo.ipynb)
+page.
+
+## Version 1.1.0 (October 2020)
+
+Update adds **full Tensorflow 2.X support**:
+
+  - Users can now run the MIDAS algorithm in TensorFlow 2.X (TF1 support
+    retained)
+
+  - Tidier handling of random seed setting across both TensorFlow and
+    NumPy
+
+  - Minor bug fixes
 
 ## Version 1.0.2 (September 2020)
 
@@ -73,7 +92,7 @@ Key changes in 1.0:
     intermediary overimputation plots (plot\_main) and all plots
     (skip\_plot).
   - Changed overimputation() plot titles, labels and legends
-  - Added tensorflow 2.0 version check on import, returns custom error
+  - Added tensorflow 2.0 version check on import
   - Fixed seed-setting bug in earlier versions
 
 ## Previous versions
@@ -117,3 +136,6 @@ Wish list:
     “overimputation” function, including visualization of
     reconstructed features
   - Basic large dataset functionality
+
+**NOTE**: An earlier version of the software is stored
+[here](https://github.com/Oracen/MIDAS).
