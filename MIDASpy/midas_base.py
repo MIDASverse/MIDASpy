@@ -29,19 +29,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import os
+
+if tf.__version__[0] == '2':
+  import tensorflow_addons as tfa
+
 from sklearn.metrics import mean_squared_error as mse
 import random
 
-class tfVersionError(Exception):
-  pass
-
-if tf.__version__[0] == '2':
-  raise tfVersionError("midas v1.0 is currently only compatible with TensorFlow 1.X") 
-elif tf.__version__[0] == '1':
-  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-
 class Midas(object):
-
   def __init__(self,
                layer_structure= [256, 256, 256],
                learn_rate= 1e-4,
@@ -138,6 +134,9 @@ class Midas(object):
 
 
     """
+    # tf.compat.v1.disable_v2_behavior()
+    tf.compat.v1.disable_eager_execution()
+
     if type(layer_structure) == list:
       self.layer_structure = layer_structure
     else:
@@ -170,6 +169,13 @@ class Midas(object):
     self.dropout_level = dropout_level
     self.prior_strength = vae_alpha
     self.kld_min = kld_min
+
+    if self.seed is not None:
+      os.environ['PYTHONHASHSEED']=str(self.seed)
+      os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+      os.environ['TF_DETERMINISTIC_OPS'] = '1'
+      tf.compat.v1.set_random_seed(self.seed)
+    	
     if weight_decay == 'default':
       self.weight_decay = 'default'
     elif type(weight_decay) == float:
@@ -193,19 +199,17 @@ class Midas(object):
     self.act = act
     self.noise_type = noise_type
 
-    if self.seed is not None:
-  	  np.random.seed(self.seed)
-  	  random.seed(self.seed)
 
   def _batch_iter(self,
                   train_data,
                   na_mask,
-                  b_size = 16):
+                  b_size = 16,
+                  rng = np.random):
     """
     Function for handling the batch feeds for training loops
     """
     indices = np.arange(train_data.shape[0])
-    np.random.shuffle(indices)
+    rng.shuffle(indices)
 
     for start_idx in range(0, train_data.shape[0] - b_size + 1, b_size):
       excerpt = indices[start_idx:start_idx + b_size]
@@ -248,7 +252,9 @@ class Midas(object):
     """
     Constructs layers for the build function
     """
-    X_tx = tf.matmul(tf.nn.dropout(X, dropout_rate), weight_matrix) + bias_vec
+    X_tx = tf.matmul(tf.compat.v1.nn.dropout(X, 
+    										 rate = (1-dropout_rate)), 
+    				 weight_matrix) + bias_vec
     if output_layer:
       return X_tx
     else:
@@ -265,7 +271,7 @@ class Midas(object):
     with smaller starting weights. Allows for faster convergence on low learn
     rates, useful in the presence of multiple loss functions
     """
-    weights.append(tf.Variable(tf.truncated_normal([num_in, num_out],
+    weights.append(tf.Variable(tf.random.truncated_normal([num_in, num_out],
                                                    mean = 0,
                                                    stddev = scale / np.sqrt(num_in + num_out))))
     biases.append(tf.Variable(tf.zeros([num_out]))) #Bias can be zero
@@ -397,19 +403,20 @@ class Midas(object):
       self.additional_data = additional_data.fillna(0)
 
     #Build graph
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
     self.graph = tf.Graph()
     with self.graph.as_default():
       if self.seed is not None:
-        tf.set_random_seed(self.seed)
-
+        # np.random.seed(self.seed)
+        tf.compat.v1.set_random_seed(self.seed)
+    
       #Placeholders
-      self.X = tf.placeholder(tf.float32, [None, in_size])
-      self.na_idx = tf.placeholder(tf.bool, [None, in_size])
+      self.X = tf.compat.v1.placeholder(tf.float32, [None, in_size])
+      self.na_idx = tf.compat.v1.placeholder(tf.bool, [None, in_size])
       if additional_data is not None:
-        self.X_add = tf.placeholder(tf.float32, [None, add_size])
+        self.X_add = tf.compat.v1.placeholder(tf.float32, [None, add_size])
       if self.vae_layer:
-        self.latent_inputs = tf.placeholder(tf.float32, [None, self.latent_space_size])
+        self.latent_inputs = tf.compat.v1.placeholder(tf.float32, [None, self.latent_space_size])
 
       #Build list for determining input and output structures
       struc_list = self.layer_structure.copy()
@@ -463,7 +470,7 @@ class Midas(object):
                                        num_out= struc_list[n+1],
                                        scale= self.init_scale)
       if self.vae_layer:
-        mapped_dist = tf.distributions.Normal(tf.constant(0.),
+        mapped_dist = tf.compat.v1.distributions.Normal(tf.constant(0.),
                                               tf.constant(self.vae_sample_var))
 #        mapped_dist = tf.distributions.StudentT(tf.constant(3.0),
 #                                                tf.constant(0.0),
@@ -523,8 +530,8 @@ class Midas(object):
               X = self._build_layer(X, _w[n], _b[n],
                                     dropout_rate = self.input_drop)
             elif self.noise_type == 'gaussian':
-              X = X + tf.distributions.Normal(loc=tf.constant(0.),
-                        scale = tf.constant(self.input_drop)).sample(sample_shape= tf.shape(X))
+              X = X + tf.compat.v1.distributions.Normal(loc=tf.constant(0.),
+                        scale = tf.constant(self.input_drop)).sample(sample_shape= tf.shape(input=X))
               X = self._build_layer(X, _w[n], _b[n],
                                     dropout_rate = self.input_drop)
           else:
@@ -548,12 +555,12 @@ class Midas(object):
         def vae(X, output=False):
           x_mu, x_log_sigma = to_z(X)
           if output:
-            reparam_z = mapped_dist.sample(sample_shape= tf.shape(x_mu))
+            reparam_z = mapped_dist.sample(sample_shape= tf.shape(input=x_mu))
 #            reparam_z = tf.random_normal(tf.shape(x_mu))
           else:
-            reparam_z = tf.random_normal(tf.shape(x_mu))
+            reparam_z = tf.random.normal(tf.shape(input=x_mu))
           z = x_mu + reparam_z * tf.exp(x_log_sigma)
-          kld = tf.maximum(tf.reduce_mean(1 + 2*x_log_sigma*x_mu**2 - tf.exp(2-x_log_sigma),
+          kld = tf.maximum(tf.reduce_mean(input_tensor=1 + 2*x_log_sigma*x_mu**2 - tf.exp(2-x_log_sigma),
                                        axis=1)*self.prior_strength * - 0.5,
             self.kld_min)
           X = from_z(z)
@@ -631,27 +638,27 @@ class Midas(object):
       na_split = tf.split(self.na_idx, output_split, axis=1)
       true_split = tf.split(self.X, output_split, axis=1)
       for n in range(len(outputs_struc)):
-        na_adj = tf.cast(tf.count_nonzero(na_split[n]),tf.float32)\
-        /tf.cast(tf.size(na_split[n]),tf.float32)
+        na_adj = tf.cast(tf.math.count_nonzero(na_split[n]),tf.float32)\
+        /tf.cast(tf.size(input=na_split[n]),tf.float32)
         if outputs_struc[n] == 'cont':
           if 'rmse' not in self.output_types:
             self.output_types.append('rmse')
           cost_list.append(tf.sqrt(
-              tf.losses.mean_squared_error(tf.boolean_mask(true_split[n], na_split[n]),
-                                           tf.boolean_mask(pred_split[n], na_split[n])\
+              tf.compat.v1.losses.mean_squared_error(tf.boolean_mask(tensor=true_split[n], mask=na_split[n]),
+                                           tf.boolean_mask(tensor=pred_split[n], mask=na_split[n])\
                                            ))*self.cont_adj * na_adj)
         elif outputs_struc[n] == 'bin':
           if 'bacc' not in self.output_types:
             self.output_types.append('bacc')
           cost_list.append(
-              tf.losses.sigmoid_cross_entropy(tf.boolean_mask(true_split[n], na_split[n]),
-                                              tf.boolean_mask(pred_split[n], na_split[n]))\
+              tf.compat.v1.losses.sigmoid_cross_entropy(tf.boolean_mask(tensor=true_split[n], mask=na_split[n]),
+                                              tf.boolean_mask(tensor=pred_split[n], mask=na_split[n]))\
               *self.binary_adj * na_adj)
         elif type(outputs_struc[n]) == int:
           self.output_types.append('sacc')
-          cost_list.append(tf.losses.softmax_cross_entropy(
-              tf.reshape(tf.boolean_mask(true_split[n], na_split[n]), [-1, outputs_struc[n]]),
-              tf.reshape(tf.boolean_mask(pred_split[n], na_split[n]), [-1, outputs_struc[n]]))\
+          cost_list.append(tf.compat.v1.losses.softmax_cross_entropy(
+              tf.reshape(tf.boolean_mask(tensor=true_split[n], mask=na_split[n]), [-1, outputs_struc[n]]),
+              tf.reshape(tf.boolean_mask(tensor=pred_split[n], mask=na_split[n]), [-1, outputs_struc[n]]))\
               *self.softmax_adj *na_adj)
 
       def output_function(out_split):
@@ -670,20 +677,25 @@ class Midas(object):
       self.outputs_struc = outputs_struc
       if self.vae_layer:
         self.output_op = output_function(out_split)
-        self.joint_loss = tf.reduce_mean(tf.reduce_sum(cost_list) + kld)# + l2_penalty)
+        self.joint_loss = tf.reduce_mean(input_tensor=tf.reduce_sum(input_tensor=cost_list) + kld)# + l2_penalty)
         self.encode_to_z = to_z(encoded)
         self.gen_from_z_sample = output_function(decode_z(mapped_dist.sample(
-            sample_shape= tf.shape(self.latent_inputs))))
+            sample_shape= tf.shape(input=self.latent_inputs))))
         self.gen_from_z_inputs = output_function(decode_z(self.latent_inputs))
 
       else:
         self.output_op = output_function(pred_split)
-        self.joint_loss = tf.reduce_mean(tf.reduce_sum(cost_list))# + l2_penalty)
+        self.joint_loss = tf.reduce_mean(input_tensor=tf.reduce_sum(input_tensor=cost_list))# + l2_penalty)
 
-      optim = tf.contrib.opt.AdamWOptimizer(lmbda, self.learn_rate)
-      self.train_step = optim.minimize(self.joint_loss)
-      self.init = tf.global_variables_initializer()
-      self.saver = tf.train.Saver()
+      if tf.__version__[0] == '2':
+        optim = tfa.optimizers.AdamW(lmbda, self.learn_rate)
+        self.train_step = optim.get_updates(loss = self.joint_loss, params = tf.compat.v1.trainable_variables())
+      else:
+        optim = tf.contrib.opt.AdamWOptimizer(lmbda, self.learn_rate)
+        self.train_step = optim.minimize(loss = self.joint_loss, var_list = tf.compat.v1.trainable_variables())
+      
+      self.init = tf.compat.v1.global_variables_initializer()
+      self.saver = tf.compat.v1.train.Saver()
 
     self.model_built = True
     if verbose:
@@ -730,15 +742,19 @@ class Midas(object):
 
     feed_data = self.imputation_target.values
     na_loc = self.na_matrix.values
-    with tf.Session(graph= self.graph) as sess:
+    with tf.compat.v1.Session(graph= self.graph) as sess:
+      if self.seed is not None:
+        train_rng = np.random.default_rng(self.seed)
+        # tf.compat.v1.set_random_seed(self.seed)
+
       sess.run(self.init)
       if verbose:
-        print("Model initialised")
-        print()
+        print("Model initialised", flush = True)
+        print(flush = True)
       for epoch in range(training_epochs):
         count = 0
         run_loss = 0
-        for batch in self._batch_iter(feed_data, na_loc, self.train_batch):
+        for batch in self._batch_iter(feed_data, na_loc, self.train_batch, train_rng):
           if np.sum(batch[1]) == 0:
             continue
           feedin = {self.X: batch[0], self.na_idx: batch[1]}
@@ -753,7 +769,7 @@ class Midas(object):
             run_loss += loss
         if verbose:
           if epoch % verbosity_ival == 0:
-            print('Epoch:', epoch, ", loss:", str(run_loss/count))
+            print('Epoch:', epoch, ", loss:", str(run_loss/count), flush = True)
       if verbose:
         print("Training complete. Saving file...")
       save_path = self.saver.save(sess, self.savepath)
@@ -791,7 +807,7 @@ class Midas(object):
                            " use 'pipeline_yield_samples' method or rebuild model "\
                            "with in-memory dataset.")
     self.output_list = []
-    with tf.Session(graph= self.graph) as sess:
+    with tf.compat.v1.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
       if verbose:
         print("Model restored.")
@@ -836,7 +852,7 @@ class Midas(object):
       raise AttributeError("Model was constructed to accept pipeline data, either"\
                            " use 'pipeline_yield_samples' method or rebuild model "\
                            "with in-memory dataset.")
-    with tf.Session(graph= self.graph) as sess:
+    with tf.compat.v1.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
       if verbose:
         print("Model restored.")
@@ -891,7 +907,7 @@ class Midas(object):
                            " use 'pipeline_yield_samples' method or rebuild model "\
                            "with in-memory dataset.")
     self.output_list = []
-    with tf.Session(graph= self.graph) as sess:
+    with tf.compat.v1.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
       if verbose:
         print("Model restored.")
@@ -948,7 +964,7 @@ class Midas(object):
       raise AttributeError("Model was constructed to accept pipeline data, either"\
                            " use 'pipeline_yield_samples' method or rebuild model "\
                            "with in-memory dataset.")
-    with tf.Session(graph= self.graph) as sess:
+    with tf.compat.v1.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
       if verbose:
         print("Model restored.")
@@ -1088,6 +1104,9 @@ class Midas(object):
 
     if excessive:
       import time
+
+    overimp_rng = np.random.default_rng(spike_seed)
+
     rmse_in = False
     sacc_in = False
     bacc_in = False
@@ -1111,7 +1130,7 @@ class Midas(object):
 
     feed_data = self.imputation_target.copy()
     na_loc = self.na_matrix
-    np.random.seed(spike_seed)
+    # np.random.seed(spike_seed)
     n_softmax = 0 #Necessary to derive the average classification error
 
     #Pandas lacks an equivalent to tf.split, so this is used to divide columns
@@ -1123,7 +1142,7 @@ class Midas(object):
     spike = []
     for n in range(len(self.size_index)):
       if self.output_types[n] == 'sacc':
-        temp_spike = pd.Series(np.random.choice([True, False],
+        temp_spike = pd.Series(overimp_rng.choice([True, False],
                                                 size= self.imputation_target.shape[0],
                                                 p= [spikein, 1-spikein]))
 
@@ -1131,7 +1150,7 @@ class Midas(object):
         n_softmax += 1
 
       else:
-        spike.append(pd.DataFrame(np.random.choice([True, False],
+        spike.append(pd.DataFrame(overimp_rng.choice([True, False],
                                         size= [self.imputation_target.shape[0],
                                                self.size_index[n]],
                                         p= [spikein, 1-spikein])))
@@ -1151,14 +1170,17 @@ class Midas(object):
     a_bacc = []
     s_sacc = []
     a_sacc = []
-    with tf.Session(graph= self.graph) as sess:
+    with tf.compat.v1.Session(graph= self.graph) as sess:
+      if self.seed is not None:
+        train_rng = np.random.default_rng(self.seed)
+      
       sess.run(self.init)
       print("Model initialised")
       print()
       for epoch in range(training_epochs + 1):
         count = 0
         run_loss = 0
-        for batch in self._batch_iter(feed_data, na_loc, self.train_batch):
+        for batch in self._batch_iter(feed_data, na_loc, self.train_batch, train_rng):
           if np.sum(batch[1]) == 0:
             continue
           feedin = {self.X: batch[0], self.na_idx: batch[1]}
@@ -1462,9 +1484,9 @@ class Midas(object):
                            "either use 'train_model' method or rebuild model "\
                            "with the 'build_model_pipeline' method.")
 
-    if self.seed is not None:
-      np.random.seed(self.seed)
-    with tf.Session(graph= self.graph) as sess:
+    # if self.seed is not None:
+    #   np.random.seed(self.seed)
+    with tf.compat.v1.Session(graph= self.graph) as sess:
       sess.run(self.init)
       if verbose:
         print("Model initialised")
@@ -1543,9 +1565,10 @@ class Midas(object):
                            "either use 'train_model' method or rebuild model "\
                            "with the 'build_model_pipeline' method.")
 
-    if self.seed is not None:
-      np.random.seed(self.seed)
-    with tf.Session(graph= self.graph) as sess:
+    # if self.seed is not None:
+    #   np.random.seed(self.seed)
+    #   tf.compat.v1.set_random_seed(self.seed)
+    with tf.compat.v1.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
       if verbose:
         print("Model restored.")
@@ -1608,7 +1631,7 @@ class Midas(object):
       raise AttributeError("Model was constructed to accept pipeline data, either"\
                            " use 'pipeline_yield_samples' method or rebuild model "\
                            "with in-memory dataset.")
-    with tf.Session(graph= self.graph) as sess:
+    with tf.compat.v1.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
       if verbose:
         print("Model restored.")
@@ -1650,7 +1673,7 @@ class Midas(object):
                            " use 'pipeline_yield_samples' method or rebuild model "\
                            "with in-memory dataset.")
     assert data.shape[1] == self.latent_space_size
-    with tf.Session(graph= self.graph) as sess:
+    with tf.compat.v1.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
       if verbose:
         print("Model restored.")
@@ -1696,7 +1719,7 @@ class Midas(object):
       raise AttributeError("Model was constructed to accept pipeline data, either"\
                            " use 'pipeline_yield_samples' method or rebuild model "\
                            "with in-memory dataset.")
-    with tf.Session(graph= self.graph) as sess:
+    with tf.compat.v1.Session(graph= self.graph) as sess:
       self.saver.restore(sess, self.savepath)
       if verbose:
         print("Model restored.")
@@ -1750,7 +1773,3 @@ class Midas(object):
     self.na_matrix = self.imputation_target.notnull().astype(np.bool)
     self.imputation_target.fillna(0, inplace= True)
     return self
-
-
-
-
