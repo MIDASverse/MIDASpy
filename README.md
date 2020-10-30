@@ -27,6 +27,7 @@ processing data before and after model training, running imputation
 model diagnostics, generating multiple completed datasets, and
 estimating regression models on these datasets.
 
+
 For an implementation in R, see our **rMIDAS** repository
 [here](https://github.com/MIDASverse/rMIDAS).
 
@@ -37,6 +38,7 @@ For more information on the MIDAS method, see:
 Lall, Ranjit, and Thomas Robinson. 2020. “Applying the MIDAS Touch: How
 to Handle Missing Values in Large and Complex Data.” APSA Preprints.
 <https://doi.org/10.33774/apsa-2020-3tk40-v3>
+
 
 ## Installation
 
