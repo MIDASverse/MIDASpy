@@ -113,5 +113,5 @@ Wish list:
     reconstructed features
   - Basic large dataset functionality
 
-**NOTE**: An earlier version of MIDASpy is stored
+**NOTE**: An earlier version of the software is stored
 [here](https://github.com/Oracen/MIDAS).
