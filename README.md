@@ -62,9 +62,8 @@ details.
 
 ## Example
 
-For a simple demonstration of **MIDASpy**, see
-[this](https://github.com/MIDASverse/MIDASpy/blob/master/Examples/midas_demo.ipynb)
-page.
+For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
+[example](https://github.com/MIDASverse/MIDASpy/blob/master/Examples/midas_demo.ipynb).
 
 ## Version 1.1.0 (October 2020)
 
