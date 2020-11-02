@@ -49,12 +49,12 @@ git+https://github.com/MIDASverse/MIDASpy.git`
 
 MIDAS requires:
 
-  - Python (\>=3.5)
+  - Python (\>=3.5; \<3.9)
   - Numpy (\>=1.5)
   - Pandas (\>=0.19)
-  - Tensorflow (\>= 1.10) – **TensorFlow 2.X now fully supported**
+  - Tensorflow (\>= 1.10) – **TensorFlow\>=2.2 now fully supported**
   - Matplotlib
-  - TensorFlow Addons (\>=0.11 if using Tensorflow \>= 2.0)
+  - TensorFlow Addons (\>=0.11 if using Tensorflow \>= 2.2)
 
 Tensorflow also has a number of requirements, particularly if GPU
 acceleration is desired. See <https://www.tensorflow.org/install/> for
