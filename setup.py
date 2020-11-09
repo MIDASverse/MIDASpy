@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(name='MIDASpy',
 	  packages=['MIDASpy'],
-      version= '1.1.0',
+      version= '1.1.1',
       licence= 'Apache',
       description= 'Multiple Imputation with Denoising Autoencoders',
       url= 'http://github.com/MIDASverse/MIDASpy',

@@ -56,7 +56,9 @@ Tensorflow also has a number of requirements, particularly if GPU acceleration i
 
 For a simple demonstration of **MIDASpy**, see our Jupyter Notebook [example](https://github.com/MIDASverse/MIDASpy/blob/master/Examples/midas_demo.ipynb). 
 
-## Version 1.1.0 (October 2020)
+## Version 1.1.1 (October 2020)
+
+*v1.1.1 fixes a minor dependency bug.*
 
 Update adds **full Tensorflow 2.X support**:
 

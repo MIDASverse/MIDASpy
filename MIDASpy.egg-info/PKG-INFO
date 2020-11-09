@@ -1,6 +1,6 @@
 Metadata-Version: 1.1
 Name: MIDASpy
-Version: 1.1.0
+Version: 1.1.1
 Summary: Multiple Imputation with Denoising Autoencoders
 Home-page: http://github.com/MIDASverse/MIDASpy
 Author: Ranjit Lall, Alex Stenlake, and Thomas Robinson
