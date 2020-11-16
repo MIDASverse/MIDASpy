@@ -1112,7 +1112,7 @@ class Midas(object):
 
     if excessive:
       import time
-
+    
     overimp_rng = np.random.default_rng(spike_seed)
 
     rmse_in = False
@@ -1301,7 +1301,7 @@ class Midas(object):
                 plt.legend()
                 
                 if save_figs:
-                  plt.savefig(fig_path+"/"+temp_true_name+"_epoch_"+epoch+".png")
+                  plt.savefig(fig_path+temp_true_name+"_epoch_"+epoch+".png")
                 else:
                   plt.show()
                   
@@ -1327,7 +1327,7 @@ class Midas(object):
                 
                 
                 if save_figs:
-                  plt.savefig(fig_path+"/continuous_vars_epoch_"+epoch+".png")
+                  plt.savefig(fig_path+"continuous_vars_epoch_"+epoch+".png")
                 else:
                   plt.show()
 
@@ -1346,7 +1346,7 @@ class Midas(object):
                 plt.legend()
                 
                 if save_figs:
-                  plt.savefig(fig_path+"/binary_vars_epoch_"+epoch+".png")
+                  plt.savefig(fig_path+"binary_vars_epoch_"+epoch+".png")
                 else:
                   plt.show()
 
@@ -1417,7 +1417,7 @@ class Midas(object):
               plt.xlabel("Reporting interval")
               
               if save_figs:
-                plt.savefig(fig_path+"/overimputation_error.png")
+                plt.savefig(fig_path+"overimputation_error.png")
               else:
                 plt.show()
           
