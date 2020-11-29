@@ -1001,7 +1001,7 @@ class Midas(object):
                  plot_main = True,
                  skip_plot = False,
                  save_figs = False,
-                 fig_path = "",
+                 save_path = "",
                  ):
     """
     This function spikes in additional missingness, so that known values can be
@@ -1079,7 +1079,7 @@ class Midas(object):
       save_figs: Boolean. Specifies whether to save generated figures instead of
       displaying graphical output (default = False).
       
-      fig_path: String. Specifies path to save pyplots if save_figs = True 
+      save_path: String. Specifies path to save pyplots if save_figs = True 
       (default = working directory).
 
       verbose: Boolean. Prints out messages, including loss, to the terminal (default = True).
@@ -1302,7 +1302,7 @@ class Midas(object):
                 
                 if save_figs:
                   plt.tight_layout()
-                  plt.savefig(fig_path+temp_true_name+"_epoch_"+str(epoch)+".png")
+                  plt.savefig(save_path+temp_true_name+"_epoch_"+str(epoch)+".png")
                   plt.clf()
                 else:
                   plt.show()
@@ -1326,15 +1326,14 @@ class Midas(object):
                   plt.xlabel(temp_pred.columns[n_rmse])
                   plt.ylabel('Density')
                   plt.legend()
+                  
+                  if save_figs:
+                    plt.tight_layout()
+                    plt.savefig(save_path+temp_pred.columns[n_rmse]+"_epoch_"+str(epoch)+".png")
+                    plt.clf()
+                  else:
+                    plt.show()
                 
-                
-                if save_figs:
-                  plt.tight_layout()
-                  plt.savefig(fig_path+"continuous_vars_epoch_"+str(epoch)+".png")
-                  plt.clf()
-                else:
-                  plt.show()
-
               agg_rmse += np.sqrt(mse(temp_true[temp_spike],
                                          temp_pred[temp_spike]))
             else:
@@ -1351,7 +1350,7 @@ class Midas(object):
                 
                 if save_figs:
                   plt.tight_layout()
-                  plt.savefig(fig_path+"binary_vars_epoch_"+str(epoch)+".png")
+                  plt.savefig(save_path+"binary_vars_epoch_"+str(epoch)+".png")
                   plt.clf()
                 else:
                   plt.show()
@@ -1424,7 +1423,7 @@ class Midas(object):
               
               if save_figs:
                 plt.tight_layout()
-                plt.savefig(fig_path+"overimputation_error.png")
+                plt.savefig(save_path+"overimputation_error.png")
                 plt.clf()
               else:
                 plt.show()
