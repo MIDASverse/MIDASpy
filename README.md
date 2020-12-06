@@ -17,9 +17,7 @@
 
 ## Overview
 
-**MIDASpy** is a Python class for multiply imputing missing data using
-MIDAS, a deep learning method based on denoising autoencoder neural
-networks. The **MIDASpy** algorithm offers significant accuracy and
+**MIDASpy** is a Python package for multiply imputing missing data using deep learning methods. The **MIDASpy** algorithm offers significant accuracy and
 efficiency advantages over other multiple imputation strategies,
 particularly when applied to large datasets with complex features. In
 addition to implementing the algorithm, the class contains functions for
@@ -32,7 +30,7 @@ For an implementation in R, see our **rMIDAS** repository
 
 ## Background on MIDAS
 
-For more information on the MIDAS method, see:
+For more information on MIDAS, the method underlying the software, see:
 
 Lall, Ranjit, and Thomas Robinson. 2020. “Applying the MIDAS Touch: How
 to Handle Missing Values in Large and Complex Data.” APSA Preprints.
