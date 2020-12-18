@@ -17,13 +17,14 @@
 
 ## Overview
 
-**MIDASpy** is a Python package for multiply imputing missing data using deep learning methods. The **MIDASpy** algorithm offers significant accuracy and
-efficiency advantages over other multiple imputation strategies,
-particularly when applied to large datasets with complex features. In
-addition to implementing the algorithm, the class contains functions for
-processing data before and after model training, running imputation
-model diagnostics, generating multiple completed datasets, and
-estimating regression models on these datasets.
+**MIDASpy** is a Python package for multiply imputing missing data using
+deep learning methods. The **MIDASpy** algorithm offers significant
+accuracy and efficiency advantages over other multiple imputation
+strategies, particularly when applied to large datasets with complex
+features. In addition to implementing the algorithm, the class contains
+functions for processing data before and after model training, running
+imputation model diagnostics, generating multiple completed datasets,
+and estimating regression models on these datasets.
 
 For an implementation in R, see our **rMIDAS** repository
 [here](https://github.com/MIDASverse/rMIDAS).
