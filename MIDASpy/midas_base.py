@@ -1834,25 +1834,22 @@ def combine(y_var,
     model or users can supply their own list of completed datasets to analyse.
 
     Args:
-      df_list: A list of pd.DataFrames.
+      df_list: A list of pd.DataFrames. The M completed datasets to be analyzed.
 
-      y_var: String. Name of the outcome variable to be analysed.
+      y_var: String. The name of the outcome variable.
 
-      X_vars: List of strings. The variable names to regress y_var on.
+      X_vars: List of strings. The names of the predictor variables.
 
-      dof_adjust: Boolean. Indicates whether or not to apply the Rubin and 
-      Barnard (1999) degrees of freedom adjustment for small-samples.
+      dof_adjust: Boolean. Indicates whether to apply the Barnard and Rubin (1999)
+      degrees of freedom adjustment for small-samples.
 
-      incl_constant: Boolean. Indicates whether to append a constant term to the
-      model DataFrame prior to analysis (as is the default in similar GLM models 
-      in other statistical packages/languages). Users may wish to set this 
-      parameter to False if they intend to add their own constant term earlier 
-      in their workflow.
+      incl_constant: Boolean. Indicates whether to include an intercept in the null 
+      model (the default in most generalized linear model software packages).
 
-      **glm_args: Arguments to be passed to statsmodels.GLM() including model
-      family, offsets, variance and frequence weights (see the statsmodels 
-      documentation for full details). If None, statsmodels.GLM() defaults to
-      a Gaussian model.
+      **glm_args: Further arguments to be passed to statsmodels.GLM(), e.g., to 
+      specify model family, offsets, and variance and frequency weights (see the
+      statsmodels documentation for full details). If None, a Gaussian (ordinary 
+      least squares) model will be estimated.
 
     Returns:
       DataFrame of combined model results  """
