@@ -1419,7 +1419,7 @@ class Midas(object):
             if not skip_plot:
               plt.title("Overimputation error during training")
               plt.ylabel("Error")
-              plt.legend()
+              plt.legend(loc=4)
               plt.ylim(ymin= 0)
               plt.xlabel("Reporting interval")
               
@@ -1916,3 +1916,60 @@ def combine(y_var,
                   'p.value' : (2 * (1 - stats.t.cdf(abs(stat), df = dof)))}
 
   return(pd.DataFrame(combined_mat))
+
+def binary_conv(x):
+  """
+    Convenience function used to convert a binary column vector of data  to 
+    1/0 encoding.
+
+    Args:
+      x: pd.Series. An indexable array containing only two unique values.
+
+    Returns:
+      A pd.Series the same length as x, with 0s and 1s corresponding to the first 
+      and unique values in x respectively. """
+  
+  labs = x.unique()[~pd.isnull(x.unique())]
+  x = np.where(x == labs[0],0,x)
+  x = np.where(x == labs[1],1,x)
+  x = np.where(pd.isnull(x),np.NaN,x)
+  
+  return(x)
+  
+def cat_conv(cat_data):
+  """
+    Convenience function used to one-hot encode a categorical column in a panda 
+    dataframe.
+
+    Args:
+      cat_data: A pd.DataFrame. A dataframe containing only categorical columns to be
+      one-hot encoded.
+
+    Returns:
+      cat_construct: pd.DataFrame. A one-hot encoded version of the input data.
+      cat_col_names: List of lists. Nested list of the one-hot encoded variable names,
+      that can be passed into the MIDASpy .build() function."""
+      
+  cat_col_names = []
+  
+  cat_construct = []
+
+  for column in cat_data.columns:
+    na_temp = cat_data[column].isnull()
+    temp = pd.get_dummies(cat_data[column], prefix = column)
+    temp[na_temp] = np.nan
+    cat_construct.append(temp)
+    cat_col_names.append(list(temp.columns.values))
+    
+  cat_construct = pd.concat(cat_construct, axis=1)
+  return(cat_construct, cat_col_names)
+
+  
+  
+  
+  
+  
+
+
+
+
