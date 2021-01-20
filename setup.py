@@ -2,20 +2,22 @@ from setuptools import setup, find_packages
 
 setup(name='MIDASpy',
 	  packages=['MIDASpy'],
-      version= '1.2.000',
+      version= '1.2.1',
       licence= 'Apache',
       description= 'Multiple Imputation with Denoising Autoencoders',
       url= 'http://github.com/MIDASverse/MIDASpy',
       author= 'Ranjit Lall, Alex Stenlake, and Thomas Robinson',
       author_email= 'R.Lall@lse.ac.uk',
-      download_url = 'https://github.com/MIDASverse/MIDASpy/releases/download/v1.2.0/MIDASpy-1.2.0.tar.gz',
+      download_url = 'https://github.com/MIDASverse/MIDASpy/archive/v1.2.1.tar.gz',
       install_requires = [
         'tensorflow>=1.10',
         'numpy>=1.5',
         'scikit-learn',
         'matplotlib',
         'pandas>=0.19',
-        "tensorflow_addons>=0.11",
+        'tensorflow_addons>=0.11',
+        'statsmodels',
+        'scipy'
       ],
       keywords = ['multiple imputation','neural networks','tensorflow'],
       classifiers = [

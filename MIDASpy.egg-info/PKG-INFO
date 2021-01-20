@@ -1,12 +1,12 @@
 Metadata-Version: 1.1
 Name: MIDASpy
-Version: 1.1.1
+Version: 1.2.1
 Summary: Multiple Imputation with Denoising Autoencoders
 Home-page: http://github.com/MIDASverse/MIDASpy
 Author: Ranjit Lall, Alex Stenlake, and Thomas Robinson
 Author-email: R.Lall@lse.ac.uk
 License: Apache
-Download-URL: https://github.com/MIDASverse/MIDASpy/releases/download/v1.1.0/MIDASpy-1.1.0.tar.gz
+Download-URL: https://github.com/MIDASverse/MIDASpy/archive/v1.2.1.tar.gz
 Description: UNKNOWN
 Keywords: multiple imputation,neural networks,tensorflow
 Platform: UNKNOWN

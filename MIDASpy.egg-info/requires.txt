@@ -4,3 +4,5 @@ scikit-learn
 matplotlib
 pandas>=0.19
 tensorflow_addons>=0.11
+statsmodels
+scipy

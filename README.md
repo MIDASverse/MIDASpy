@@ -53,6 +53,8 @@ MIDAS requires:
   - Pandas (\>=0.19)
   - Tensorflow (\>= 1.10) – **TensorFlow\>=2.2 now fully supported**
   - Matplotlib
+  - Statmodels
+  - Scipy
   - TensorFlow Addons (\>=0.11 if using Tensorflow \>= 2.2)
 
 Tensorflow also has a number of requirements, particularly if GPU
@@ -63,6 +65,18 @@ details.
 
 For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
 [example](https://github.com/MIDASverse/MIDASpy/blob/master/Examples/midas_demo.ipynb).
+
+## Version 1.2.1 (January 2021)
+
+*v1.2.1 adds new pre-processing functionality and a multiple imputation
+regression function.*
+
+Users can now automatically preprocess binary and categorical columns
+prior to running the MIDAS algorithm using `binary_conv()` and
+`cat_conv()`.
+
+The new `combine()` function allows users to run regression analysis
+across the complete data, following Rubin’s combination rules.
 
 ## Version 1.1.1 (October 2020)
 
@@ -78,12 +92,11 @@ Update adds **full Tensorflow 2.X support**:
 
   - Minor bug fixes
 
-## Version 1.0.2 (September 2020)
+## Previous versions
 
-*v1.0.2 patches MIDASpy to allow for packaging to PyPi, and updates the
-package name.*
+*Version 1.0.2 (September 2020)*
 
-Key changes in 1.0:
+Key changes:
 
   - Minor, mainly cosmetic, changes to the underlying source code.
   - Renamed ‘categorical\_columns’ argument in build\_model() to
@@ -94,8 +107,6 @@ Key changes in 1.0:
   - Changed overimputation() plot titles, labels and legends
   - Added tensorflow 2.0 version check on import
   - Fixed seed-setting bug in earlier versions
-
-## Previous versions
 
 *Alpha 0.2:*
 
