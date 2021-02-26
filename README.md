@@ -33,9 +33,8 @@ For an implementation in R, see our **rMIDAS** repository
 
 For more information on MIDAS, the method underlying the software, see:
 
-Lall, Ranjit, and Thomas Robinson. 2020. “Applying the MIDAS Touch: How
-to Handle Missing Values in Large and Complex Data.” APSA Preprints.
-<https://doi.org/10.33774/apsa-2020-3tk40-v3>
+Lall, Ranjit, and Thomas Robinson. Forthcoming. “The MIDAS Touch: Accurate and Scalable Missing-Data Imputation with Deep Learning.” _Political Analysis_.
+<http://eprints.lse.ac.uk/108170/1/Lall_Robinson_PA_Forthcoming.pdf>
 
 ## Installation
 
