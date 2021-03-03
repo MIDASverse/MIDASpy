@@ -39,7 +39,7 @@ Lall, Ranjit, and Thomas Robinson. Forthcoming. “The MIDAS Touch: Accurate and
 
 ## Installation
 
-To install via pip, input the following command into the terminal:  
+To install via pip, enter the following command into the terminal:  
 `pip install MIDASpy`
 
 The latest development version (potentially unstable) can be installed
