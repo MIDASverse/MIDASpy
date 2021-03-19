@@ -21,7 +21,7 @@
 deep learning methods. The **MIDASpy** algorithm offers significant
 accuracy and efficiency advantages over other multiple imputation
 strategies, particularly when applied to large datasets with complex
-features. In addition to implementing the algorithm, the class contains
+features. In addition to implementing the algorithm, the package contains
 functions for processing data before and after model training, running
 imputation model diagnostics, generating multiple completed datasets,
 and estimating regression models on these datasets.
@@ -29,17 +29,17 @@ and estimating regression models on these datasets.
 For an implementation in R, see our **rMIDAS** repository
 [here](https://github.com/MIDASverse/rMIDAS).
 
-## Background on MIDAS
+## Background and suggested citation
 
 For more information on MIDAS, the method underlying the software, see:
 
-Lall, Ranjit, and Thomas Robinson. 2020. “Applying the MIDAS Touch: How
-to Handle Missing Values in Large and Complex Data.” APSA Preprints.
-<https://doi.org/10.33774/apsa-2020-3tk40-v3>
+Lall, Ranjit, and Thomas Robinson. Forthcoming. “The MIDAS Touch: Accurate and Scalable Missing-Data Imputation with Deep Learning.” _Political Analysis_.
+<br />[Gated version](https://doi.org/10.1017/pan.2020.49)
+<br />[Ungated version](http://eprints.lse.ac.uk/108170/1/Lall_Robinson_PA_Forthcoming.pdf)
 
 ## Installation
 
-To install via pip, input the following command into the terminal:  
+To install via pip, enter the following command into the terminal:  
 `pip install MIDASpy`
 
 The latest development version (potentially unstable) can be installed
