@@ -37,7 +37,7 @@ Lall, Ranjit, and Thomas Robinson. Forthcoming. “The MIDAS Touch: Accurate and
 
 For more general background on multiple imputation and its advantages over other missing-data methods, see:
 
-Lall, Ranjit. 2016. "How multiple imputation makes a difference." _Political Analysis_ 24 (4): 414-433. [Ungated (published)](https://www.jstor.org/stable/26349729).
+Lall, Ranjit. 2016. "How Multiple Imputation Makes A Difference." _Political Analysis_ 24 (4): 414-433. [Ungated (published)](https://www.jstor.org/stable/26349729).
 
 ## Installation
 
