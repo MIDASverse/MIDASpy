@@ -147,6 +147,3 @@ Wish list:
     “overimputation” function, including visualization of
     reconstructed features
   - Basic large dataset functionality
-
-**NOTE**: An earlier version of the software is stored
-[here](https://github.com/Oracen/MIDAS).
