@@ -68,7 +68,7 @@ For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
 
 ## Contributing to MIDASpy
 
-Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at LSE. To apply, please send your CV (or a summary of relevant skills/experience)  to R.Lall@lse.ac.uk.
+Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the London School of Economics. To apply, please send your CV (or a summary of relevant skills/experience)  to R.Lall@lse.ac.uk.
 
 ## Version 1.2.1 (January 2021)
 
