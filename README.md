@@ -66,6 +66,10 @@ details.
 For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
 [example](https://github.com/MIDASverse/MIDASpy/blob/master/Examples/midas_demo.ipynb).
 
+## Contributing to MIDASpy
+
+Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at LSE. To apply, please send your CV (or a summary of relevant skills/experience)  to R.Lall@lse.ac.uk.
+
 ## Version 1.2.1 (January 2021)
 
 *v1.2.1 adds new pre-processing functionality and a multiple imputation
