@@ -33,7 +33,7 @@ For an implementation in R, see our **rMIDAS** repository
 
 For more information on MIDAS, the method underlying the software, see:
 
-Lall, Ranjit, and Thomas Robinson. 2022. "The MIDAS touch: Accurate and scalable missing-data imputation with deep learning." _Political Analysis_ 30, no. 2 (2022): 179-196.
+Lall, Ranjit, and Thomas Robinson. 2022. "The MIDAS Touch: Accurate and Scalable Missing-Data Imputation with Deep Learning." _Political Analysis_ 30, no. 2: 179-196.
 
 https://doi.org/10.1017/pan.2020.49. 
 
