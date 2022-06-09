@@ -748,6 +748,8 @@ class Midas(object):
       if self.seed is not None:
         train_rng = np.random.default_rng(self.seed)
         # tf.compat.v1.set_random_seed(self.seed)
+      else:
+        train_rng = np.random.default_rng()
 
       sess.run(self.init)
       if verbose:
