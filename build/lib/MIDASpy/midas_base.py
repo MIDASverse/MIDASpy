@@ -66,176 +66,176 @@ class Midas(object):
                  noise_type: str = 'bernoulli',
                  kld_min: float = 0.01
                  ):
-      """"
-      Initialiser. Called separately to 'build_model' to allow for out-of-memory
-      datasets. All key hyperparameters are entered at this stage, as the model
-      construction methods only deal with the dataset.
+        """"
+        Initialiser. Called separately to 'build_model' to allow for out-of-memory
+        datasets. All key hyperparameters are entered at this stage, as the model
+        construction methods only deal with the dataset.
 
-      Args:
-      layer_structure: List of integers. The number of nodes in each layer of the
-      network (default = [256, 256, 256], denoting a three-layer network with 256
-      nodes per layer). Larger networks can learn more complex data structures but
-      require longer training and are more prone to overfitting.
+        Args:
+        layer_structure: List of integers. The number of nodes in each layer of the
+        network (default = [256, 256, 256], denoting a three-layer network with 256
+        nodes per layer). Larger networks can learn more complex data structures but
+        require longer training and are more prone to overfitting.
 
-      learn_rate: Float. The learning rate (gamma; default = 0.0001), which
-      controls the size of the weight adjustment in each training epoch. In general,
-      higher values reduce training time at the expense of less accurate results.
+        learn_rate: Float. The learning rate (gamma; default = 0.0001), which
+        controls the size of the weight adjustment in each training epoch. In general,
+        higher values reduce training time at the expense of less accurate results.
 
-      input_drop: Float between 0 and 1. The probability of corruption for input
-      columns in training mini-batches (default = 0.8). Higher values increase
-      training time but reduce the risk of overfitting. In our experience, values
-      between 0.7 and 0.95 deliver the best performance.
+        input_drop: Float between 0 and 1. The probability of corruption for input
+        columns in training mini-batches (default = 0.8). Higher values increase
+        training time but reduce the risk of overfitting. In our experience, values
+        between 0.7 and 0.95 deliver the best performance.
 
-      train_batch: Integer. The number of observations in training mini-batches
-      (default = 16). Common choices are 8, 16, 32, 64, and 128; powers of 2 tend to
-      enhance memory efficiency. In general, smaller sizes lead to faster convergence
-      at the cost of greater noise and thus less accurate estimates of the error
-      gradient. Where memory management is a concern, they should be favored.
+        train_batch: Integer. The number of observations in training mini-batches
+        (default = 16). Common choices are 8, 16, 32, 64, and 128; powers of 2 tend to
+        enhance memory efficiency. In general, smaller sizes lead to faster convergence
+        at the cost of greater noise and thus less accurate estimates of the error
+        gradient. Where memory management is a concern, they should be favored.
 
-      savepath: String. The location to which the trained model will be saved.
+        savepath: String. The location to which the trained model will be saved.
 
-      seed: Integer. The value to which Python's pseudo-random number
-      generator is initialized. This enables users to ensure that data shuffling,
-      weight and bias initialization, and missingness indicator vectors are
-      reproducible.
+        seed: Integer. The value to which Python's pseudo-random number
+        generator is initialized. This enables users to ensure that data shuffling,
+        weight and bias initialization, and missingness indicator vectors are
+        reproducible.
 
-      loss_scale: Float. A constant by which the RMSE loss functions are multiplied
-      (default = 1). This hyperparameter performs a similar function to the learning
-      rate. If loss during training is very large, increasing its value can help to
-      prevent overtraining.
+        loss_scale: Float. A constant by which the RMSE loss functions are multiplied
+        (default = 1). This hyperparameter performs a similar function to the learning
+        rate. If loss during training is very large, increasing its value can help to
+        prevent overtraining.
 
-      init_scale: Float. The numerator of the variance component of Xavier Initialisation
-      equation (default = 1). In very deep networks, higher values may help to prevent
-      extreme gradients (though this problem is less common with ELU activation functions).
+        init_scale: Float. The numerator of the variance component of Xavier Initialisation
+        equation (default = 1). In very deep networks, higher values may help to prevent
+        extreme gradients (though this problem is less common with ELU activation functions).
 
-      softmax_adj: Float. A constant by which the cross-entropy loss functions are
-      multiplied (default = 1). This hyperparameter is the equivalent of loss_scale
-      for categorical variables. If cross-entropy loss falls at a consistently faster
-      rate than RMSE during training, a lower value may help to redress this imbalance.
+        softmax_adj: Float. A constant by which the cross-entropy loss functions are
+        multiplied (default = 1). This hyperparameter is the equivalent of loss_scale
+        for categorical variables. If cross-entropy loss falls at a consistently faster
+        rate than RMSE during training, a lower value may help to redress this imbalance.
 
-      vae_layer: Boolean. Specifies whether to include a variational autoencoder layer in
-      the network (default = False), one of the key diagnostic tools included in midas.
-      If set to true, variational autoencoder hyperparameters must be specified via a number
-      of additional arguments.
+        vae_layer: Boolean. Specifies whether to include a variational autoencoder layer in
+        the network (default = False), one of the key diagnostic tools included in midas.
+        If set to true, variational autoencoder hyperparameters must be specified via a number
+        of additional arguments.
 
-      latent_space_size: Integer. The number of normal dimensions used to parameterize the
-      latent space when vae_layer = True.
+        latent_space_size: Integer. The number of normal dimensions used to parameterize the
+        latent space when vae_layer = True.
 
-      vae_sample_var: Float. The sampling variance of the normal distributions used to
-      parameterize the latent space when vae_layer = True.
+        vae_sample_var: Float. The sampling variance of the normal distributions used to
+        parameterize the latent space when vae_layer = True.
 
-      vae_alpha: Float. The strength of the prior imposed on the Kullback-Leibler divergence term
-      in the variational autoencoder loss functions.
+        vae_alpha: Float. The strength of the prior imposed on the Kullback-Leibler divergence term
+        in the variational autoencoder loss functions.
 
-      kld_min: Float. The minimum value of the Kullback-Leibler divergence term in the variational
-      autoencoder loss functions.
+        kld_min: Float. The minimum value of the Kullback-Leibler divergence term in the variational
+        autoencoder loss functions.
 
-      Returns:
-      Self
+        Returns:
+        Self
 
 
-      """
-      # tf.compat.v1.disable_v2_behavior()
-      tf.compat.v1.disable_eager_execution()
+        """
+        # tf.compat.v1.disable_v2_behavior()
+        tf.compat.v1.disable_eager_execution()
 
-      # Sanity Check layer_structure:
-      if not layer_structure:
-        layer_structure = [256, 256, 256]
-      if not isinstance(layer_structure, list):
-          raise TypeError("The layer structure must be specified within a list type.")
-      if not all(isinstance(v, int) for v in layer_structure):
-          raise ValueError("The elements of the layer_structure must all be specified as integer types.")
+        # Sanity Check layer_structure:
+        if not layer_structure:
+            layer_structure = [256, 256, 256]
+        if not isinstance(layer_structure, list):
+            raise TypeError("The layer structure must be specified within a list type.")
+        if not all(isinstance(v, int) for v in layer_structure):
+            raise ValueError("The elements of the layer_structure must all be specified as integer types.")
 
-      # Sanity Check output_layers:
-      if not isinstance(output_layers, (str, list)):
-          raise TypeError("The 'output_layers' argument must be a string or a list type.")
-      if isinstance(output_layers, str):
-          if not output_layers == "reversed":
-              raise ValueError("The only string argument accepted for output_layers is 'reversed'.")
-          self.output_layers = layer_structure.copy()
-          self.output_layers.reverse()
-      if isinstance(output_layers, list):
-        self.output_layers = output_layers
+        # Sanity Check output_layers:
+        if not isinstance(output_layers, (str, list)):
+            raise TypeError("The 'output_layers' argument must be a string or a list type.")
+        if isinstance(output_layers, str):
+            if not output_layers == "reversed":
+                raise ValueError("The only string argument accepted for output_layers is 'reversed'.")
+            self.output_layers = layer_structure.copy()
+            self.output_layers.reverse()
+        if isinstance(output_layers, list):
+            self.output_layers = output_layers
 
-      # Sanity Check weight_decay:
-      if not isinstance(weight_decay, (str, float)):
-        raise TypeError("The 'weight_decay' argument must be a string or float type.")
-      if isinstance(weight_decay, str):
-        if not weight_decay == 'default':
-          raise ValueError("The 'weight_decay' argument must be 'default' if a string.")
-        self.weight_decay = 'default'
-      if isinstance(weight_decay, float):
-        self.weight_decay = weight_decay
+        # Sanity Check weight_decay:
+        if not isinstance(weight_decay, (str, float)):
+            raise TypeError("The 'weight_decay' argument must be a string or float type.")
+        if isinstance(weight_decay, str):
+            if not weight_decay == 'default':
+                raise ValueError("The 'weight_decay' argument must be 'default' if a string.")
+            self.weight_decay = 'default'
+        if isinstance(weight_decay, float):
+            self.weight_decay = weight_decay
 
-      # Sanity Check output_structure:
-      if output_structure is None:
-        self.output_structure = [16, 16, 32]
-      if isinstance(output_structure, int):
-        self.output_structure = [output_structure] * 3
-      elif (individual_outputs is True) | (len(output_structure) == 3):
-        self.output_structure = output_structure
-      else:
-        raise TypeError("The output transform assignment must take the form of an integer, a list of three "
-                        "elements (cont, bin, cat), or individual values must be specified.")
+        # Sanity Check output_structure:
+        if output_structure is None:
+            self.output_structure = [16, 16, 32]
+        if isinstance(output_structure, int):
+            self.output_structure = [output_structure] * 3
+        elif (individual_outputs is True) | (len(output_structure) == 3):
+            self.output_structure = output_structure
+        else:
+            raise TypeError("The output transform assignment must take the form of an integer, a list of three "
+                            "elements (cont, bin, cat), or individual values must be specified.")
 
-      if seed is not None:
-        os.environ['PYTHONHASHSEED'] = str(seed)
-        os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
-        os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
-        tf.compat.v1.set_random_seed(seed)
+        if seed is not None:
+            os.environ['PYTHONHASHSEED'] = str(seed)
+            os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+            os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+            tf.compat.v1.set_random_seed(seed)
 
-      self.layer_structure = layer_structure
-      self.learn_rate = learn_rate
-      self.input_drop = input_drop
-      self.model_built = False
-      self.savepath = savepath
-      self.model = None
-      self.additional_data = None
-      self.train_batch = train_batch
-      self.seed = seed
-      self.input_is_pipeline = False
-      self.input_pipeline = None
-      self.vae_layer = vae_layer
-      self.loss_scale = loss_scale
-      self.init_scale = init_scale
-      self.individual_outputs = individual_outputs
-      self.manual_outputs = manual_outputs
-      self.vae_sample_var = vae_sample_var
-      self.latent_space_size = latent_space_size
-      self.dropout_level = dropout_level
-      self.prior_strength = vae_alpha
-      self.kld_min = kld_min
-      self.seed = seed
-      self.cont_adj = cont_adj
-      self.binary_adj = binary_adj
-      self.softmax_adj = softmax_adj
-      self.act = act
-      self.noise_type = noise_type
+        self.layer_structure = layer_structure
+        self.learn_rate = learn_rate
+        self.input_drop = input_drop
+        self.model_built = False
+        self.savepath = savepath
+        self.model = None
+        self.additional_data = None
+        self.train_batch = train_batch
+        self.seed = seed
+        self.input_is_pipeline = False
+        self.input_pipeline = None
+        self.vae_layer = vae_layer
+        self.loss_scale = loss_scale
+        self.init_scale = init_scale
+        self.individual_outputs = individual_outputs
+        self.manual_outputs = manual_outputs
+        self.vae_sample_var = vae_sample_var
+        self.latent_space_size = latent_space_size
+        self.dropout_level = dropout_level
+        self.prior_strength = vae_alpha
+        self.kld_min = kld_min
+        self.seed = seed
+        self.cont_adj = cont_adj
+        self.binary_adj = binary_adj
+        self.softmax_adj = softmax_adj
+        self.act = act
+        self.noise_type = noise_type
 
     def _batch_iter(self,
                     train_data,
                     na_mask,
                     b_size=16,
                     rng=np.random):
-      """
-      Function for handling the batch feeds for training loops
-      """
-      indices = np.arange(train_data.shape[0])
-      rng.shuffle(indices)
+        """
+        Function for handling the batch feeds for training loops
+        """
+        indices = np.arange(train_data.shape[0])
+        rng.shuffle(indices)
 
-      for start_idx in range(0, train_data.shape[0] - b_size + 1, b_size):
-          excerpt = indices[start_idx:start_idx + b_size]
-          if self.additional_data is None:
-              yield train_data[excerpt], na_mask[excerpt]
-          else:
-              yield train_data[excerpt], na_mask[excerpt], self.additional_data.values[excerpt]
+        for start_idx in range(0, train_data.shape[0] - b_size + 1, b_size):
+            excerpt = indices[start_idx:start_idx + b_size]
+            if self.additional_data is None:
+                yield train_data[excerpt], na_mask[excerpt]
+            else:
+                yield train_data[excerpt], na_mask[excerpt], self.additional_data.values[excerpt]
 
     def _batch_iter_output(self,
                            train_data,
                            b_size=256):
         """
-    Identical to _batch_iter(), although designed for a single datasource
-    """
+        Identical to _batch_iter(), although designed for a single datasource
+        """
 
         indices = np.arange(train_data.shape[0])
         for start_idx in range(0, train_data.shape[0], b_size):
@@ -245,12 +245,12 @@ class Midas(object):
             else:
                 yield train_data[excerpt], self.additional_data.values[excerpt]
 
-    def _batch_iter_zsample(self,
-                            data,
+    @staticmethod
+    def _batch_iter_zsample(data,
                             b_size=256):
         """
-    Identical to _batch_iter(), although designed for sampling from latent
-    """
+        Identical to _batch_iter(), although designed for sampling from latent
+        """
         indices = np.arange(data.shape[0])
         for start_idx in range(0, data.shape[0], b_size):
             excerpt = indices[start_idx:start_idx + b_size]
@@ -263,8 +263,8 @@ class Midas(object):
                      dropout_rate=0.5,
                      output_layer=False):
         """
-    Constructs layers for the build function
-    """
+        Constructs layers for the build function
+        """
         X_tx = tf.matmul(tf.compat.v1.nn.dropout(X,
                                                  rate=(1 - dropout_rate)),
                          weight_matrix) + bias_vec
@@ -280,24 +280,24 @@ class Midas(object):
                          num_out,
                          scale=1):
         """
-    Custom initialiser for a weights, using a variation on Xavier initialisation
-    with smaller starting weights. Allows for faster convergence on low learn
-    rates, useful in the presence of multiple loss functions
-    """
+        Custom initialiser for a weights, using a variation on Xavier initialisation
+        with smaller starting weights. Allows for faster convergence on low learn
+        rates, useful in the presence of multiple loss functions
+        """
         weights.append(tf.Variable(tf.random.truncated_normal([num_in, num_out],
                                                               mean=0,
                                                               stddev=scale / np.sqrt(num_in + num_out))))
         biases.append(tf.Variable(tf.zeros([num_out])))  # Bias can be zero
         return weights, biases
 
-    def _sort_cols(self,
-                   data,
+    @staticmethod
+    def _sort_cols(data,
                    subset):
         """
-    This function is used to sequence the columns of the dataset, so as to be in
-    the order [Continuous data], [Binary data], [Categorical data]. It simply
-    rearranges a column, done functionally to minimise memory overhead
-    """
+        This function is used to sequence the columns of the dataset, so as to be in
+        the order [Continuous data], [Binary data], [Categorical data]. It simply
+        rearranges a column, done functionally to minimise memory overhead
+        """
         data_1 = data[subset]
         data_0 = data.drop(subset, axis=1)
         chunk = data_1.shape[1]
