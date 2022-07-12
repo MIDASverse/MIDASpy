@@ -189,6 +189,14 @@ class Midas(object):
             os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
             tf.compat.v1.set_random_seed(seed)
 
+        # Sanity Check savepath:
+        if not isinstance(savepath, str):
+            raise TypeError("The 'savepath' argument must be a string type.")
+        if not os.path.isdir(savepath):
+            raise FileExistsError("The passed argument was a file, not a directory.")
+        if not os.path.exists(savepath):
+            os.mkdir(savepath)
+
         self.layer_structure = layer_structure
         self.learn_rate = learn_rate
         self.input_drop = input_drop
@@ -663,7 +671,7 @@ class Midas(object):
                         self.output_types.append('rmse')
                     cost_list.append(tf.sqrt(
                         tf.compat.v1.losses.mean_squared_error(tf.boolean_mask(tensor=true_split[n], mask=na_split[n]),
-                                                               tf.boolean_mask(tensor=pred_split[n], mask=na_split[n]) \
+                                                               tf.boolean_mask(tensor=pred_split[n], mask=na_split[n])
                                                                )) * self.cont_adj * na_adj)
                 elif outputs_struc[n] == 'bin':
                     if 'bacc' not in self.output_types:
@@ -671,13 +679,13 @@ class Midas(object):
                     cost_list.append(
                         tf.compat.v1.losses.sigmoid_cross_entropy(
                             tf.boolean_mask(tensor=true_split[n], mask=na_split[n]),
-                            tf.boolean_mask(tensor=pred_split[n], mask=na_split[n])) \
+                            tf.boolean_mask(tensor=pred_split[n], mask=na_split[n]))
                         * self.binary_adj * na_adj)
                 elif type(outputs_struc[n]) == int:
                     self.output_types.append('sacc')
                     cost_list.append(tf.compat.v1.losses.softmax_cross_entropy(
                         tf.reshape(tf.boolean_mask(tensor=true_split[n], mask=na_split[n]), [-1, outputs_struc[n]]),
-                        tf.reshape(tf.boolean_mask(tensor=pred_split[n], mask=na_split[n]), [-1, outputs_struc[n]])) \
+                        tf.reshape(tf.boolean_mask(tensor=pred_split[n], mask=na_split[n]), [-1, outputs_struc[n]]))
                                      * self.softmax_adj * na_adj)
 
             def output_function(out_split):
@@ -1867,8 +1875,8 @@ def combine(y_var,
         dof_adjust: Boolean. Indicates whether to apply the Barnard and Rubin (1999)
         degrees of freedom adjustment for small-samples.
 
-        incl_constant: Boolean. Indicates whether to include an intercept in the null
-        model (the default in most generalized linear model software packages).
+        incl_constant: Boolean. Indicates whether to include an intercept in the null model (the default in
+        most generalized linear model software packages).
 
         **glm_args: Further arguments to be passed to statsmodels.GLM(), e.g., to
         specify model family, offsets, and variance and frequency weights (see the
@@ -1939,7 +1947,7 @@ def combine(y_var,
                     'df': dof,
                     'p.value': (2 * (1 - stats.t.cdf(abs(stat), df=dof)))}
 
-    return (pd.DataFrame(combined_mat))
+    return pd.DataFrame(combined_mat)
 
 
 def binary_conv(x):
@@ -1959,7 +1967,7 @@ def binary_conv(x):
     x = np.where(x == labs[1], 1, x)
     x = np.where(pd.isnull(x), np.NaN, x)
 
-    return (x)
+    return x
 
 
 def cat_conv(cat_data):
@@ -1988,4 +1996,4 @@ def cat_conv(cat_data):
         cat_col_names.append(list(temp.columns.values))
 
     cat_construct = pd.concat(cat_construct, axis=1)
-    return (cat_construct, cat_col_names)
+    return cat_construct, cat_col_names
