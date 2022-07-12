@@ -457,7 +457,7 @@ class Midas(object):
                 else:
                     outputs_struc += [size_index[n]]
 
-            if self.manual_outputs == True:
+            if self.manual_outputs is True:
                 output_layer_size = np.sum(self.output_structure)
                 output_layer_structure = self.output_structure
             else:
