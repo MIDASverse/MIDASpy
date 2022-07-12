@@ -1112,6 +1112,8 @@ class Midas(object):
           for the missingness spike-in. This is separate to the seed specified in the Midas()
           call.
 
+          cont_kdes: ADD THIS PARAMETER AND DESCRIPTION TO THE DOCSTRING
+
           excessive: Specifies whether to print aggregate mini-batch loss to the terminal
           (default = False). This argument differs from the .train_model()'s excessive argument,
           which prints individual mini-batch loss. This allows users to check for unusual imputations,
@@ -1147,8 +1149,7 @@ class Midas(object):
                 return np.sum(a[spike.flatten()] == b[spike.flatten()]) / np.sum(spike)
 
             def findcatname(strlist):
-                return strlist[0][:([min([x[0] == elem for elem in x]) \
-                                     for x in zip(*strlist)] + [0]).index(0)]
+                return strlist[0][:([min([x[0] == elem for elem in x]) for x in zip(*strlist)] + [0]).index(0)]
 
             sacc_in = True
 
