@@ -37,34 +37,35 @@ if tf.__version__[0] == '2':
   import tensorflow_addons as tfa
 
 from sklearn.metrics import mean_squared_error as mse
+from typing import List, Optional
 import random
 
 class Midas(object):
   def __init__(self,
-               layer_structure= [256, 256, 256],
-               learn_rate= 1e-4,
-               input_drop= 0.8,
-               train_batch = 16,
-               savepath= 'tmp/MIDAS',
-               seed= None,
-               output_layers= 'reversed',
-               loss_scale= 1,
-               init_scale= 1,
-               vae_layer= False,
-               individual_outputs= False,
-               manual_outputs= False,
-               output_structure= [16, 16, 32],
-               latent_space_size = 4,
-               cont_adj= 1.0,
-               binary_adj= 1.0,
-               softmax_adj= 1.0,
-               dropout_level = 0.5,
-               weight_decay = 'default',
-               vae_alpha = 1.0,
+               layer_structure: Optional[List[int]] = None,
+               learn_rate: float = 1e-4,
+               input_drop: float = 0.8,
+               train_batch: int = 16,
+               savepath: str = 'tmp/MIDAS',
+               seed: (int, type(None)) = None,
+               output_layers: str = 'reversed',
+               loss_scale: int = 1,
+               init_scale: int = 1,
+               vae_layer: bool = False,
+               individual_outputs: bool = False,
+               manual_outputs: bool = False,
+               output_structure: Optional[List[int]] = None,
+               latent_space_size: int = 4,
+               cont_adj: float = 1.0,
+               binary_adj: float = 1.0,
+               softmax_adj: float = 1.0,
+               dropout_level: float = 0.5,
+               weight_decay: str = 'default',
+               vae_alpha: float = 1.0,
                act = tf.nn.elu,
-               vae_sample_var = 1.0,
-               noise_type = 'bernoulli',
-               kld_min = 0.01
+               vae_sample_var: float = 1.0,
+               noise_type: str = 'bernoulli',
+               kld_min: float = 0.01,
                ):
     """
     Initialiser. Called separately to 'build_model' to allow for out-of-memory
@@ -133,24 +134,54 @@ class Midas(object):
     Returns:
       Self
 
-
-
     """
-    # tf.compat.v1.disable_v2_behavior()
-    tf.compat.v1.disable_eager_execution()
+    # Sanity Check layer_structure:
+    if not layer_structure:
+      layer_structure = [256, 256, 256]
+    if not isinstance(layer_structure, list):
+      raise TypeError("The layer structure must be specified within a list type.")
+    if not all(isinstance(v, int) for v in layer_structure):
+      raise ValueError("The elements of the layer_structure must all be specified as integer types.")
 
-    if type(layer_structure) == list:
-      self.layer_structure = layer_structure
-    else:
-      raise ValueError("Layer structure must be specified within a list")
-    if type(output_layers) == list:
-      self.output_layers = output_layers
-
-    elif output_layers == 'reversed':
+    # Sanity Check output_layers:
+    if not isinstance(output_layers, (str, list)):
+      raise TypeError("The 'output_layers' argument must be a string or a list type.")
+    if isinstance(output_layers, str):
+      if not output_layers == "reversed":
+        raise ValueError("The only string argument accepted for output_layers is 'reversed'.")
       self.output_layers = layer_structure.copy()
       self.output_layers.reverse()
+    if isinstance(output_layers, list):
+      self.output_layers = output_layers
+
+    # Sanity Check weight_decay:
+    if not isinstance(weight_decay, (str, float)):
+      raise TypeError("The 'weight_decay' argument must be a string or float type.")
+    if isinstance(weight_decay, str):
+      if not weight_decay == 'default':
+        raise ValueError("The 'weight_decay' argument must be 'default' if a string.")
+      self.weight_decay = 'default'
+    if isinstance(weight_decay, float):
+      self.weight_decay = weight_decay
+
+    # Sanity Check output_structure:
+    if output_structure is None:
+      self.output_structure = [16, 16, 32]
+    if isinstance(output_structure, int):
+      self.output_structure = [output_structure] * 3
+    elif (individual_outputs is True) | (len(output_structure) == 3):
+      self.output_structure = output_structure
     else:
-      raise ValueError("Please specify correct output layer structure")
+      raise TypeError("The output transform assignment must take the form of an integer, a list of three "
+                      "elements (cont, bin, cat), or individual values must be specified.")
+
+    if seed is not None:
+      os.environ['PYTHONHASHSEED'] = str(seed)
+      os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+      os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+      tf.compat.v1.set_random_seed(seed)
+
+    self.layer_structure = layer_structure
     self.learn_rate = learn_rate
     self.input_drop = input_drop
     self.model_built = False
@@ -171,36 +202,12 @@ class Midas(object):
     self.dropout_level = dropout_level
     self.prior_strength = vae_alpha
     self.kld_min = kld_min
-
-    if self.seed is not None:
-      os.environ['PYTHONHASHSEED']=str(self.seed)
-      os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
-      os.environ['TF_DETERMINISTIC_OPS'] = '1'
-      tf.compat.v1.set_random_seed(self.seed)
-    	
-    if weight_decay == 'default':
-      self.weight_decay = 'default'
-    elif type(weight_decay) == float:
-      self.weight_decay = weight_decay
-    else:
-      raise ValueError("Weight decay argument accepts either 'standard' (string) "\
-                       "or floating point")
-
-
-    if type(output_structure) == int:
-      self.output_structure = [output_structure]*3
-    elif (individual_outputs == True) | (len(output_structure) ==3):
-      self.output_structure = output_structure
-    else:
-      raise TypeError("The output transform assignment must take the form of "\
-                      "an integer, a list of three elements (cont, bin, cat), "\
-                      "or individual values must be specified.")
+    self.seed = seed
     self.cont_adj = cont_adj
     self.binary_adj = binary_adj
     self.softmax_adj = softmax_adj
     self.act = act
     self.noise_type = noise_type
-
 
   def _batch_iter(self,
                   train_data,
@@ -254,8 +261,8 @@ class Midas(object):
     """
     Constructs layers for the build function
     """
-    X_tx = tf.matmul(tf.compat.v1.nn.dropout(X, 
-    										 rate = (1-dropout_rate)), 
+    X_tx = tf.matmul(tf.compat.v1.nn.dropout(X,
+    										 rate = (1-dropout_rate)),
     				 weight_matrix) + bias_vec
     if output_layer:
       return X_tx
@@ -411,7 +418,7 @@ class Midas(object):
       if self.seed is not None:
         # np.random.seed(self.seed)
         tf.compat.v1.set_random_seed(self.seed)
-    
+
       #Placeholders
       self.X = tf.compat.v1.placeholder(tf.float32, [None, in_size])
       self.na_idx = tf.compat.v1.placeholder(tf.bool, [None, in_size])
@@ -695,7 +702,7 @@ class Midas(object):
       else:
         optim = tf.contrib.opt.AdamWOptimizer(lmbda, self.learn_rate)
         self.train_step = optim.minimize(loss = self.joint_loss, var_list = tf.compat.v1.trainable_variables())
-      
+
       self.init = tf.compat.v1.global_variables_initializer()
       self.saver = tf.compat.v1.train.Saver()
 
@@ -1116,7 +1123,7 @@ class Midas(object):
 
     if excessive:
       import time
-    
+
     overimp_rng = np.random.default_rng(spike_seed)
 
     rmse_in = False
@@ -1185,7 +1192,7 @@ class Midas(object):
     with tf.compat.v1.Session(graph= self.graph) as sess:
       if self.seed is not None:
         train_rng = np.random.default_rng(self.seed)
-      
+
       sess.run(self.init)
       print("Model initialised", flush = True)
       print(flush = True)
@@ -1303,14 +1310,14 @@ class Midas(object):
                 plt.xlabel(temp_true_name)
                 plt.ylabel('Proportion')
                 plt.legend()
-                
+
                 if save_figs:
                   plt.tight_layout()
                   plt.savefig(save_path+temp_true_name+"_epoch_"+str(epoch)+".png")
                   plt.clf()
                 else:
                   plt.show()
-                  
+
               agg_sacc += (1 - sacc(temp_true.values, temp_pred.values,
                                    temp_spike)) / n_softmax
             elif self.output_types[n] == 'rmse':
@@ -1330,14 +1337,14 @@ class Midas(object):
                   plt.xlabel(temp_pred.columns[n_rmse])
                   plt.ylabel('Density')
                   plt.legend()
-                  
+
                   if save_figs:
                     plt.tight_layout()
                     plt.savefig(save_path+temp_pred.columns[n_rmse]+"_epoch_"+str(epoch)+".png")
                     plt.clf()
                   else:
                     plt.show()
-                
+
               agg_rmse += np.sqrt(mse(temp_true[temp_spike],
                                          temp_pred[temp_spike]))
             else:
@@ -1351,7 +1358,7 @@ class Midas(object):
                 plt.xlabel('Variables')
                 plt.ylabel('Proportion')
                 plt.legend()
-                
+
                 if save_figs:
                   plt.tight_layout()
                   plt.savefig(save_path+"binary_vars_epoch_"+str(epoch)+".png")
@@ -1367,13 +1374,13 @@ class Midas(object):
             a_rmse.append(agg_rmse)
             print("Individual RMSE on spike-in:", single_rmse, flush = True)
             print("Aggregated RMSE on spike-in:", agg_rmse, flush = True)
-            
+
           if sacc_in:
             s_sacc.append(single_sacc)
             a_sacc.append(agg_sacc)
             print("Individual error on softmax spike-in:", single_sacc, flush = True)
             print("Aggregated error on softmax spike-in:", agg_sacc, flush = True)
-            
+
           if bacc_in:
             s_bacc.append(single_bacc)
             a_bacc.append(agg_bacc)
@@ -1424,14 +1431,14 @@ class Midas(object):
               plt.legend(loc=4)
               plt.ylim(ymin= 0)
               plt.xlabel("Reporting interval")
-              
+
               if save_figs:
                 plt.tight_layout()
                 plt.savefig(save_path+"overimputation_error.png")
                 plt.clf()
               else:
                 plt.show()
-          
+
       print("Overimputation complete. Adjust complexity as needed.", flush = True)
       return self
 
@@ -1811,11 +1818,11 @@ class Midas(object):
     return self
 
 
-def combine(y_var, 
+def combine(y_var,
             X_vars,
-            df_list = None, 
+            df_list = None,
             dof_adjust = True,
-            incl_constant = True, 
+            incl_constant = True,
             **glm_args,
             ):
   """
@@ -1873,11 +1880,11 @@ def combine(y_var,
     ind_results = ind_model.fit()
     mods_est.append(ind_results.params)
     mods_var.append(np.diag(ind_results.cov_params()))
-    
+
     if i == 0:
       mods_df_resid = ind_results.df_resid
       mods_coef_names = ind_results.model.exog_names
-  
+
   Q_bar = np.multiply((1/m), np.sum(np.array(mods_est),0))
   U_bar = np.multiply((1/m), np.sum(np.array(mods_var),0))
 
@@ -1893,15 +1900,15 @@ def combine(y_var,
   if dof_adjust:
 
     v_complete = mods_df_resid
-  
+
     gamma = ((1+m**(-1))*B)/Q_bar_var
-    
+
     v_obs = ((v_complete + 1)/(v_complete+3))*v_complete*(1-gamma)
-    
+
     v_corrected = ((1/v_m) + (1/v_obs))**(-1)
-    
+
     dof = v_corrected
-  
+
   else:
 
     dof = v_m
@@ -1930,14 +1937,14 @@ def binary_conv(x):
     Returns:
       A pd.Series the same length as x, with 0s and 1s corresponding to the first 
       and unique values in x respectively. """
-  
+
   labs = x.unique()[~pd.isnull(x.unique())]
   x = np.where(x == labs[0],0,x)
   x = np.where(x == labs[1],1,x)
   x = np.where(pd.isnull(x),np.NaN,x)
-  
+
   return(x)
-  
+
 def cat_conv(cat_data):
   """
     Convenience function used to one-hot encode a categorical column in a panda 
@@ -1951,9 +1958,9 @@ def cat_conv(cat_data):
       cat_construct: pd.DataFrame. A one-hot encoded version of the input data.
       cat_col_names: List of lists. Nested list of the one-hot encoded variable names,
       that can be passed into the MIDASpy .build() function."""
-      
+
   cat_col_names = []
-  
+
   cat_construct = []
 
   for column in cat_data.columns:
@@ -1962,15 +1969,15 @@ def cat_conv(cat_data):
     temp[na_temp] = np.nan
     cat_construct.append(temp)
     cat_col_names.append(list(temp.columns.values))
-    
+
   cat_construct = pd.concat(cat_construct, axis=1)
   return(cat_construct, cat_col_names)
 
-  
-  
-  
-  
-  
+
+
+
+
+
 
 
 
