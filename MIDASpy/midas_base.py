@@ -1120,15 +1120,14 @@ class Midas(object):
 
         """
         if not self.model_built:
-            raise AttributeError("The computation graph must be built before the model" \
-                                 " can be trained")
+            raise AttributeError("The computation graph must be built before the model can be trained")
 
         if self.input_is_pipeline:
-            raise AttributeError("Overimputation not currently supported for models" \
+            raise AttributeError("Overimputation not currently supported for models"
                                  " which use a pipeline function for input.")
         # These values simplify control flow used later for error calculation and
         # visualisation of convergence.
-        if cont_kdes & (plot_vars == False):
+        if cont_kdes & (plot_vars is False):
             raise ValueError("Cannot plot KDEs if plot_vars is False")
 
         if excessive:
