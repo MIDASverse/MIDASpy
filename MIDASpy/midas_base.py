@@ -250,9 +250,9 @@ class Midas(object):
             else:
                 yield train_data[excerpt], self.additional_data.values[excerpt]
 
-    def _batch_iter_zsample(self,
-                            data,
-                            b_size=256):
+    @staticmethod
+    def _batch_iter_zsample(data,
+                            b_size: int = 256):
         """
         Identical to _batch_iter(), although designed for sampling from latent
         """
@@ -278,8 +278,8 @@ class Midas(object):
         else:
             return self.act(X_tx)
 
-    def _build_variables(self,
-                         weights,
+    @staticmethod
+    def _build_variables(weights,
                          biases,
                          num_in,
                          num_out,
@@ -295,8 +295,8 @@ class Midas(object):
         biases.append(tf.Variable(tf.zeros([num_out])))  # Bias can be zero
         return weights, biases
 
-    def _sort_cols(self,
-                   data,
+    @staticmethod
+    def _sort_cols(data,
                    subset):
         """
         This function is used to sequence the columns of the dataset, so as to be in
@@ -371,8 +371,8 @@ class Midas(object):
         if not isinstance(imputation_target, pd.DataFrame):
             raise TypeError("Input data must be in a DataFrame")
         if imputation_target.isnull().sum().sum() == 0:
-            raise ValueError("Imputation target contains no missing values. Please" \
-                             " ensure missing values are encoded as type np.nan")
+            raise ValueError("Imputation target contains no missing values. Please ensure "
+                             "missing values are encoded as type np.nan")
         self.original_columns = imputation_target.columns
         cont_exists = False
         cat_exists = False
@@ -751,12 +751,12 @@ class Midas(object):
 
         """
         if not self.model_built:
-            raise AttributeError("The computation graph must be built before the model" \
+            raise AttributeError("The computation graph must be built before the model"
                                  " can be trained")
 
         if self.input_is_pipeline:
-            raise AttributeError("Model was constructed to accept pipeline data, either" \
-                                 " use 'train_model_pipeline' method or rebuild model " \
+            raise AttributeError("Model was constructed to accept pipeline data, either"
+                                 " use 'train_model_pipeline' method or rebuild model "
                                  "with in-memory dataset.")
 
         feed_data = self.imputation_target.values
@@ -820,12 +820,12 @@ class Midas(object):
         """
 
         if not self.model_built:
-            raise AttributeError("The computation graph must be built before the model" \
+            raise AttributeError("The computation graph must be built before the model"
                                  " can be trained")
 
         if self.input_is_pipeline:
-            raise AttributeError("Model was constructed to accept pipeline data, either" \
-                                 " use 'pipeline_yield_samples' method or rebuild model " \
+            raise AttributeError("Model was constructed to accept pipeline data, either"
+                                 " use 'pipeline_yield_samples' method or rebuild model "
                                  "with in-memory dataset.")
         self.output_list = []
         with tf.compat.v1.Session(graph=self.graph) as sess:
@@ -866,12 +866,12 @@ class Midas(object):
         """
 
         if not self.model_built:
-            raise AttributeError("The computation graph must be built before the model" \
+            raise AttributeError("The computation graph must be built before the model"
                                  " can be trained")
 
         if self.input_is_pipeline:
-            raise AttributeError("Model was constructed to accept pipeline data, either" \
-                                 " use 'pipeline_yield_samples' method or rebuild model " \
+            raise AttributeError("Model was constructed to accept pipeline data, either"
+                                 " use 'pipeline_yield_samples' method or rebuild model "
                                  "with in-memory dataset.")
         with tf.compat.v1.Session(graph=self.graph) as sess:
             self.saver.restore(sess, self.savepath)
@@ -920,12 +920,12 @@ class Midas(object):
           Self
         """
         if not self.model_built:
-            raise AttributeError("The computation graph must be built before the model" \
+            raise AttributeError("The computation graph must be built before the model"
                                  " can be trained")
 
         if self.input_is_pipeline:
-            raise AttributeError("Model was constructed to accept pipeline data, either" \
-                                 " use 'pipeline_yield_samples' method or rebuild model " \
+            raise AttributeError("Model was constructed to accept pipeline data, either"
+                                 " use 'pipeline_yield_samples' method or rebuild model "
                                  "with in-memory dataset.")
         self.output_list = []
         with tf.compat.v1.Session(graph=self.graph) as sess:
@@ -978,12 +978,12 @@ class Midas(object):
         Returns:
           Self    """
         if not self.model_built:
-            raise AttributeError("The computation graph must be built before the model" \
+            raise AttributeError("The computation graph must be built before the model"
                                  " can be trained")
 
         if self.input_is_pipeline:
-            raise AttributeError("Model was constructed to accept pipeline data, either" \
-                                 " use 'pipeline_yield_samples' method or rebuild model " \
+            raise AttributeError("Model was constructed to accept pipeline data, either"
+                                 " use 'pipeline_yield_samples' method or rebuild model "
                                  "with in-memory dataset.")
         with tf.compat.v1.Session(graph=self.graph) as sess:
             self.saver.restore(sess, self.savepath)
@@ -1535,11 +1535,11 @@ class Midas(object):
         """
         self.input_pipeline = input_pipeline
         if not self.model_built:
-            raise AttributeError("The computation graph must be built before the model" \
+            raise AttributeError("The computation graph must be built before the model"
                                  " can be trained")
         if not self.input_is_pipeline:
-            raise AttributeError("Model was constructed to accept locally-stored data," \
-                                 "either use 'train_model' method or rebuild model " \
+            raise AttributeError("Model was constructed to accept locally-stored data,"
+                                 "either use 'train_model' method or rebuild model "
                                  "with the 'build_model_pipeline' method.")
 
         # if self.seed is not None:
@@ -1562,12 +1562,12 @@ class Midas(object):
                                   self.na_idx: na_loc}
                     else:
                         if not isinstance(feed_data, list):
-                            raise TypeError("Input should be a list of two DataFrames, with " \
-                                            "index 0 containing the target imputation data, and" \
+                            raise TypeError("Input should be a list of two DataFrames, with "
+                                            "index 0 containing the target imputation data, and"
                                             " the data at index 1 containing additional data")
                         if len(feed_data) != 2:
-                            raise TypeError("Input should be a list of two DataFrames, with " \
-                                            "index 0 containing the target imputation data, and" \
+                            raise TypeError("Input should be a list of two DataFrames, with "
+                                            "index 0 containing the target imputation data, and"
                                             " the data at index 1 containing additional data")
                         if not isinstance(feed_data[0], pd.DataFrame):
                             raise TypeError("Input data must be in a DataFrame")
@@ -1616,11 +1616,11 @@ class Midas(object):
 
         """
         if not self.model_built:
-            raise AttributeError("The computation graph must be built before the model" \
+            raise AttributeError("The computation graph must be built before the model"
                                  " can be trained")
         if not self.input_is_pipeline:
-            raise AttributeError("Model was constructed to accept locally-stored data," \
-                                 "either use 'train_model' method or rebuild model " \
+            raise AttributeError("Model was constructed to accept locally-stored data,"
+                                 "either use 'train_model' method or rebuild model "
                                  "with the 'build_model_pipeline' method.")
 
         # if self.seed is not None:
@@ -1639,12 +1639,12 @@ class Midas(object):
                     feedin = {self.X: feed_data.fillna(0).values}
                 else:
                     if not isinstance(feed_data, list):
-                        raise TypeError("Input should be a list of two DataFrames, with " \
-                                        "index 0 containing the target imputation data, and" \
+                        raise TypeError("Input should be a list of two DataFrames, with "
+                                        "index 0 containing the target imputation data, and"
                                         " the data at index 1 containing additional data")
                     if len(feed_data) != 2:
-                        raise TypeError("Input should be a list of two DataFrames, with " \
-                                        "index 0 containing the target imputation data, and" \
+                        raise TypeError("Input should be a list of two DataFrames, with "
+                                        "index 0 containing the target imputation data, and"
                                         " the data at index 1 containing additional data")
                     if not isinstance(feed_data[0], pd.DataFrame):
                         raise TypeError("Input data must be in a DataFrame")
@@ -1680,14 +1680,14 @@ class Midas(object):
           Sampled_output
         """
         if not self.model_built:
-            raise AttributeError("The computation graph must be built before the model" \
+            raise AttributeError("The computation graph must be built before the model"
                                  " can be trained")
         if not self.vae_layer:
-            raise AttributeError("The model must include a VAE layer to be used to generate" \
+            raise AttributeError("The model must include a VAE layer to be used to generate"
                                  " new observations from a latent distribution")
         if self.input_is_pipeline:
-            raise AttributeError("Model was constructed to accept pipeline data, either" \
-                                 " use 'pipeline_yield_samples' method or rebuild model " \
+            raise AttributeError("Model was constructed to accept pipeline data, either"
+                                 " use 'pipeline_yield_samples' method or rebuild model "
                                  "with in-memory dataset.")
         with tf.compat.v1.Session(graph=self.graph) as sess:
             self.saver.restore(sess, self.savepath)
@@ -1721,14 +1721,14 @@ class Midas(object):
           Generated_output
         """
         if not self.model_built:
-            raise AttributeError("The computation graph must be built before the model" \
+            raise AttributeError("The computation graph must be built before the model"
                                  " can be trained")
         if not self.vae_layer:
-            raise AttributeError("The model must include a VAE layer to be used to generate" \
+            raise AttributeError("The model must include a VAE layer to be used to generate"
                                  " new observations from a latent distribution")
         if self.input_is_pipeline:
-            raise AttributeError("Model was constructed to accept pipeline data, either" \
-                                 " use 'pipeline_yield_samples' method or rebuild model " \
+            raise AttributeError("Model was constructed to accept pipeline data, either"
+                                 " use 'pipeline_yield_samples' method or rebuild model "
                                  "with in-memory dataset.")
         assert data.shape[1] == self.latent_space_size
         with tf.compat.v1.Session(graph=self.graph) as sess:
@@ -1767,15 +1767,15 @@ class Midas(object):
           Self, z_mu, z_log_sigma
         """
         if not self.model_built:
-            raise AttributeError("The computation graph must be built before the model" \
+            raise AttributeError("The computation graph must be built before the model"
                                  " can be trained")
         if not self.vae_layer:
-            raise AttributeError("The model must include a VAE layer to be used to encode" \
+            raise AttributeError("The model must include a VAE layer to be used to encode"
                                  " the dataset into the latent space")
 
         if self.input_is_pipeline:
-            raise AttributeError("Model was constructed to accept pipeline data, either" \
-                                 " use 'pipeline_yield_samples' method or rebuild model " \
+            raise AttributeError("Model was constructed to accept pipeline data, either"
+                                 " use 'pipeline_yield_samples' method or rebuild model "
                                  "with in-memory dataset.")
         with tf.compat.v1.Session(graph=self.graph) as sess:
             self.saver.restore(sess, self.savepath)
