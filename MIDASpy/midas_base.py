@@ -43,12 +43,12 @@ import random
 
 class Midas(object):
     """
-    Generic Class Discussion.
-
-
-
+    MIDASpy is a Python package for multiply imputing missing data using deep learning methods. The MIDASpy algorithm
+    offers significant accuracy and efficiency advantages over other multiple imputation strategies, particularly when
+    applied to large datasets with complex features. In addition to implementing the algorithm, the package contains
+    functions for processing data before and after model training, running imputation model diagnostics, generating
+    multiple completed datasets, and estimating regression models on these datasets.
     """
-
     def __init__(self,
                  layer_structure: Optional[List[int]] = None,
                  learn_rate: float = 1e-4,
