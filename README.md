@@ -70,6 +70,10 @@ For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
 
 Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the London School of Economics. To apply, please send your CV (or a summary of relevant skills/experience)  to R.Lall@lse.ac.uk.
 
+## Version 1.2.2 (July 2022)
+
+*v1.2.2 makes minor efficiency changes to the codebase. Full details are available in the Release logs.
+
 ## Version 1.2.1 (January 2021)
 
 *v1.2.1 adds new pre-processing functionality and a multiple imputation
@@ -82,21 +86,23 @@ prior to running the MIDAS algorithm using `binary_conv()` and
 The new `combine()` function allows users to run regression analysis
 across the complete data, following Rubin’s combination rules.
 
-## Version 1.1.1 (October 2020)
+## Previous versions
 
-*v1.1.1 fixes a minor dependency bug.*
+*Version 1.1.1 (October 2020)*
 
-Update adds **full Tensorflow 2.X support**:
+Key changes:
 
-  - Users can now run the MIDAS algorithm in TensorFlow 2.X (TF1 support
+  - Update adds **full Tensorflow 2.X support**:
+
+    - Users can now run the MIDAS algorithm in TensorFlow 2.X (TF1 support
     retained)
 
-  - Tidier handling of random seed setting across both TensorFlow and
+    - Tidier handling of random seed setting across both TensorFlow and
     NumPy
-
-  - Minor bug fixes
-
-## Previous versions
+    
+  - Fixes a minor dependency bug
+  
+  - Other minor bug fixes
 
 *Version 1.0.2 (September 2020)*
 
