@@ -1120,7 +1120,7 @@ class Midas(object):
           for the missingness spike-in. This is separate to the seed specified in the Midas()
           call.
 
-          cont_kdes: ADD THIS PARAMETER AND DESCRIPTION TO THE DOCSTRING
+          cont_kdes: Boolean. Whether to plot kernel density estimates for continuous variables.
 
           excessive: Specifies whether to print aggregate mini-batch loss to the terminal
           (default = False). This argument differs from the .train_model()'s excessive argument,
