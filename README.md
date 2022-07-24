@@ -72,7 +72,7 @@ Interested in contributing to **MIDASpy**? We are looking to hire a research ass
 
 ## Version 1.2.2 (July 2022)
 
-*v1.2.2 makes minor efficiency changes to the codebase. Full details are available in the Release logs.
+*v1.2.2 makes minor efficiency changes to the codebase. Full details are available in the Release logs.*
 
 ## Version 1.2.1 (January 2021)
 
