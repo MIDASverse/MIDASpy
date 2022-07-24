@@ -174,7 +174,7 @@ class Midas(object):
 
         # Sanity Check output_structure:
         if output_structure is None:
-            self.output_structure = [16, 16, 32]
+            output_structure = [16, 16, 32]
         if isinstance(output_structure, int):
             self.output_structure = [output_structure] * 3
         elif (individual_outputs is True) | (len(output_structure) == 3):
@@ -192,10 +192,10 @@ class Midas(object):
         # Sanity Check savepath:
         if not isinstance(savepath, str):
             raise TypeError("The 'savepath' argument must be a string type.")
-        if not os.path.isdir(savepath):
+        if os.path.exists(savepath) and not os.path.isdir(savepath):
             raise FileExistsError("The passed argument was a file, not a directory.")
         if not os.path.exists(savepath):
-            os.mkdir(savepath)
+            os.makedirs(savepath)
 
         self.layer_structure = layer_structure
         self.learn_rate = learn_rate
@@ -1120,7 +1120,7 @@ class Midas(object):
           for the missingness spike-in. This is separate to the seed specified in the Midas()
           call.
 
-          cont_kdes: ADD THIS PARAMETER AND DESCRIPTION TO THE DOCSTRING
+          cont_kdes: Boolean. Whether to plot kernel density estimates for continuous variables.
 
           excessive: Specifies whether to print aggregate mini-batch loss to the terminal
           (default = False). This argument differs from the .train_model()'s excessive argument,
