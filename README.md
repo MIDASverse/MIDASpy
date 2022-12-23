@@ -1,19 +1,5 @@
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
 # MIDASpy<img src='MIDASpy_logo.png' align="right" height="139" /></a>
-
-<!-- badges: start -->
-
-<!-- [![CRAN status](https://www.r-pkg.org/badges/version/dplyr)](https://cran.r-project.org/package=dplyr) -->
-
-<!-- [![R build status](https://github.com/tidyverse/dplyr/workflows/R-CMD-check/badge.svg)](https://github.com/tidyverse/dplyr/actions?workflow=R-CMD-check) -->
-
-<!-- [![Codecov test coverage](https://codecov.io/gh/tidyverse/dplyr/branch/master/graph/badge.svg)](https://codecov.io/gh/tidyverse/dplyr?branch=master) -->
-
-<!-- [![R build status](https://github.com/tidyverse/dplyr/workflows/R-CMD-check/badge.svg)](https://github.com/tidyverse/dplyr/actions) -->
-
-<!-- badges: end -->
 
 ## Overview
 
@@ -70,21 +56,21 @@ For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
 
 Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the London School of Economics. To apply, please send your CV (or a summary of relevant skills/experience)  to R.Lall@lse.ac.uk.
 
+## Version 1.2.3 (December 2022)
+
+*v1.2.3 adds support for installation on Apple Silicon hardware (i.e. M1 and M2 Macs).*
+
 ## Version 1.2.2 (July 2022)
 
 *v1.2.2 makes minor efficiency changes to the codebase. Full details are available in the Release logs.*
 
 ## Version 1.2.1 (January 2021)
 
-*v1.2.1 adds new pre-processing functionality and a multiple imputation
-regression function.*
+*v1.2.1 adds new pre-processing functionality and a multiple imputation regression function.*
 
-Users can now automatically preprocess binary and categorical columns
-prior to running the MIDAS algorithm using `binary_conv()` and
-`cat_conv()`.
+Users can now automatically preprocess binary and categorical columns prior to running the MIDAS algorithm using `binary_conv()` and `cat_conv()`.
 
-The new `combine()` function allows users to run regression analysis
-across the complete data, following Rubin’s combination rules.
+The new `combine()` function allows users to run regression analysis across the complete data, following Rubin’s combination rules.
 
 ## Previous versions
 
