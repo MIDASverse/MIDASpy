@@ -15,7 +15,7 @@ and estimating regression models on these datasets.
 For an implementation in R, see our **rMIDAS** repository
 [here](https://github.com/MIDASverse/rMIDAS).
 
-## Background and suggested citation
+## Background and suggested citations
 
 For more information on MIDAS, the method underlying the software, see:
 
