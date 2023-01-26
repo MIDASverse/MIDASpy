@@ -19,9 +19,7 @@ For an implementation in R, see our **rMIDAS** repository
 
 For more information on MIDAS, the method underlying the software, see:
 
-Lall, Ranjit, and Thomas Robinson. 2022. "The MIDAS Touch: Accurate and Scalable Missing-Data Imputation with Deep Learning." _Political Analysis_ 30, no. 2: 179-196. https://doi.org/10.1017/pan.2020.49. 
-
-An ungated version of the paper is available [here](http://eprints.lse.ac.uk/108170/1/Lall_Robinson_PA_Forthcoming.pdf).
+Lall, Ranjit, and Thomas Robinson. 2022. "The MIDAS Touch: Accurate and Scalable Missing-Data Imputation with Deep Learning." _Political Analysis_ 30, no. 2: 179-196. [Published version](https://ranjitlall.github.io/assets/pdf/Lall%20and%20Robinson%202022%20PA.pdf). [Accepted version](http://eprints.lse.ac.uk/108170/1/Lall_Robinson_PA_Forthcoming.pdf).
 
 ## Installation
 
@@ -54,7 +52,7 @@ For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
 
 ## Contributing to MIDASpy
 
-Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the London School of Economics. To apply, please send your CV (or a summary of relevant skills/experience)  to R.Lall@lse.ac.uk.
+Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the London School of Economics. To apply, please send your CV (or a summary of relevant skills/experience)  to ranjit.lall@sjc.ox.ac.uk.
 
 ## Version 1.2.3 (December 2022)
 
