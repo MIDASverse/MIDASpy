@@ -311,6 +311,8 @@ class Midas(object):
         the order [Continuous data], [Binary data], [Categorical data]. It simply
         rearranges a column, done functionally to minimise memory overhead
         """
+        if not isinstance(subset, list):
+            subset = list(subset)
         data_1 = data[subset]
         data_0 = data.drop(subset, axis=1)
         chunk = data_1.shape[1]
@@ -421,7 +423,7 @@ class Midas(object):
         # Commit some variables to the instance of the class
         self.size_index = size_index
         if not self.input_is_pipeline:
-            self.na_matrix = imputation_target.notnull().astype(np.bool)
+            self.na_matrix = imputation_target.notnull().astype(bool)
         self.imputation_target = imputation_target.fillna(0)
         if additional_data is not None:
             self.additional_data = additional_data.fillna(0)
@@ -1836,7 +1838,7 @@ class Midas(object):
         if self.additional_data is not None:
             self.additional_data = additional_data.copy()
             self.additional_data.fillna(0, inplace=True)
-        self.na_matrix = self.imputation_target.notnull().astype(np.bool)
+        self.na_matrix = self.imputation_target.notnull().astype(bool)
         self.imputation_target.fillna(0, inplace=True)
         return self
 
