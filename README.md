@@ -1,6 +1,13 @@
 
 # MIDASpy<img src='MIDASpy_logo.png' align="right" height="139" /></a>
 
+[![PyPI Latest Release](https://img.shields.io/pypi/v/midaspy.svg)](https://pypi.org/project/midaspy/)
+[![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-blue)](https://pypi.org/project/midaspy/)
+[![lifecycle](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://lifecycle.r-lib.org/articles/stages.html)
+[![CI Linux](https://github.com/edvinskis/MIDASpy/actions/workflows/testlinux.yml/badge.svg)](https://github.com/edvinskis/MIDASpy/actions/workflows/testlinux.yml)
+[![CI macOS](https://github.com/edvinskis/MIDASpy/actions/workflows/testmacos.yml/badge.svg)](https://github.com/edvinskis/MIDASpy/actions/workflows/testmacos.yml)
+[![CI Windows](https://github.com/edvinskis/MIDASpy/actions/workflows/testwindows.yml/badge.svg)](https://github.com/edvinskis/MIDASpy/actions/workflows/testwindows.yml)
+
 ## Overview
 
 **MIDASpy** is a Python package for multiply imputing missing data using
