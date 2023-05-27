@@ -1992,7 +1992,7 @@ def cat_conv(cat_data):
 
     for column in cat_data.columns:
         na_temp = cat_data[column].isnull()
-        temp = pd.get_dummies(cat_data[column], prefix=column)
+        temp = pd.get_dummies(cat_data[column], prefix=column, dtype=np.uint8)
         temp[na_temp] = np.nan
         cat_construct.append(temp)
         cat_col_names.append(list(temp.columns.values))

@@ -29,32 +29,39 @@ To install via pip, enter the following command into the terminal:
 `pip install MIDASpy`
 
 The latest development version (potentially unstable) can be installed
-via the terminal with: `pip install
-git+https://github.com/MIDASverse/MIDASpy.git`
+via the terminal with:  
+`pip install git+https://github.com/MIDASverse/MIDASpy.git`
 
 MIDAS requires:
 
-  - Python (\>=3.5; \<3.9)
-  - Numpy (\>=1.5)
-  - Pandas (\>=0.19)
-  - Tensorflow (\>= 1.10) – **TensorFlow\>=2.2 now fully supported**
+  - Python (>=3.6; <3.11)
+  - Numpy (>=1.5)
+  - Pandas (>=0.19)
+  - TensorFlow (<2.12)
   - Matplotlib
   - Statmodels
   - Scipy
-  - TensorFlow Addons (\>=0.11 if using Tensorflow \>= 2.2)
+  - TensorFlow Addons (<0.20)
 
-Tensorflow also has a number of requirements, particularly if GPU
-acceleration is desired. See <https://www.tensorflow.org/install/> for
-details.
+Tensorflow also has a number of requirements, particularly if GPU acceleration is desired. See <https://www.tensorflow.org/install/> for details.
 
-## Example
+## Examples
 
 For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
-[example](https://github.com/MIDASverse/MIDASpy/blob/master/Examples/midas_demo.ipynb).
+[examples](https://github.com/MIDASverse/MIDASpy/blob/master/Examples/).
 
 ## Contributing to MIDASpy
 
-Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the University of Oxford. To apply, please send your CV (or a summary of relevant skills/experience)  to ranjit.lall@sjc.ox.ac.uk.
+Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the University of Oxford. To apply, please send your CV (or a summary of relevant skills/experience) to ranjit.lall@sjc.ox.ac.uk.
+
+## Version 1.2.4 (June 2023)
+
+*v1.2.4* 
+- Adds support for Python 3.9 and 3.10
+- Addresses deprecation warnings and other minor bug fixes
+- Resolves dependency issues and includes an updated `setup.py` file
+- Adds GitHub Actions workflows that trigger automatic tests on the latest Ubuntu OS, macOS, and Windows for Python versions 3.7 to 3.10 each time a push or pull request is made to the main branch
+- An additional Jupyter Notebook example that demonstrates the core functionalities of **MIDASpy**
 
 ## Version 1.2.3 (December 2022)
 
