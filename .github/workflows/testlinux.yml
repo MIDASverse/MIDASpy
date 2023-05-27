@@ -3,10 +3,12 @@ name: Run Tests Linux
 on:
   push:
     branches:
-      - [main, master]
+      - main
+      - master
   pull_request:
     branches:
-      - [main, master]
+      - main
+      - master
 
 jobs:
   test:
