@@ -1,9 +1,9 @@
 Metadata-Version: 2.1
 Name: MIDASpy
-Version: 1.2.3
+Version: 1.2.4
 Summary: Multiple Imputation with Denoising Autoencoders
 Home-page: http://github.com/MIDASverse/MIDASpy
-Download-URL: https://github.com/MIDASverse/MIDASpy/archive/v1.2.3.tar.gz
+Download-URL: https://github.com/MIDASverse/MIDASpy/archive/v1.2.4.tar.gz
 Author: Ranjit Lall, Alex Stenlake, and Thomas Robinson
 Author-email: R.Lall@lse.ac.uk
 License: Apache
@@ -13,14 +13,25 @@ Classifier: Intended Audience :: Science/Research
 Classifier: Topic :: Scientific/Engineering
 Classifier: License :: OSI Approved :: Apache Software License
 Classifier: Programming Language :: Python :: 3
-Classifier: Programming Language :: Python :: 3.5
 Classifier: Programming Language :: Python :: 3.6
 Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Requires-Python: >=3.6, <3.11
 Description-Content-Type: text/markdown
+Provides-Extra: test
 License-File: LICENSE.txt
 
 
 # MIDASpy<img src='MIDASpy_logo.png' align="right" height="139" /></a>
+
+[![PyPI Latest Release](https://img.shields.io/pypi/v/midaspy.svg)](https://pypi.org/project/midaspy/)
+[![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-blue)](https://pypi.org/project/midaspy/)
+[![lifecycle](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://lifecycle.r-lib.org/articles/stages.html)
+[![CI Linux](https://github.com/edvinskis/MIDASpy/actions/workflows/testlinux.yml/badge.svg)](https://github.com/edvinskis/MIDASpy/actions/workflows/testlinux.yml)
+[![CI macOS](https://github.com/edvinskis/MIDASpy/actions/workflows/testmacos.yml/badge.svg)](https://github.com/edvinskis/MIDASpy/actions/workflows/testmacos.yml)
+[![CI Windows](https://github.com/edvinskis/MIDASpy/actions/workflows/testwindows.yml/badge.svg)](https://github.com/edvinskis/MIDASpy/actions/workflows/testwindows.yml)
 
 ## Overview
 
@@ -36,13 +47,13 @@ and estimating regression models on these datasets.
 For an implementation in R, see our **rMIDAS** repository
 [here](https://github.com/MIDASverse/rMIDAS).
 
-## Background and suggested citation
+## Background and suggested citations
 
 For more information on MIDAS, the method underlying the software, see:
 
-Lall, Ranjit, and Thomas Robinson. 2022. "The MIDAS Touch: Accurate and Scalable Missing-Data Imputation with Deep Learning." _Political Analysis_ 30, no. 2: 179-196. https://doi.org/10.1017/pan.2020.49. 
+Lall, Ranjit, and Thomas Robinson. 2022. "The MIDAS Touch: Accurate and Scalable Missing-Data Imputation with Deep Learning." _Political Analysis_ 30, no. 2: 179-196. [Published version](https://ranjitlall.github.io/assets/pdf/Lall%20and%20Robinson%202022%20PA.pdf). [Accepted version](http://eprints.lse.ac.uk/108170/1/Lall_Robinson_PA_Forthcoming.pdf).
 
-An ungated version of the paper is available [here](http://eprints.lse.ac.uk/108170/1/Lall_Robinson_PA_Forthcoming.pdf).
+Lall, Ranjit, and Thomas Robinson. 2023. "Efficient Multiple Imputation for Diverse Data in Python and R: MIDASpy and rMIDAS." _Journal of Statistical Software_. [Accepted version](https://ranjitlall.github.io/assets/pdf/jss4379.pdf) (in press).
 
 ## Installation
 
@@ -50,32 +61,39 @@ To install via pip, enter the following command into the terminal:
 `pip install MIDASpy`
 
 The latest development version (potentially unstable) can be installed
-via the terminal with: `pip install
-git+https://github.com/MIDASverse/MIDASpy.git`
+via the terminal with:  
+`pip install git+https://github.com/MIDASverse/MIDASpy.git`
 
 MIDAS requires:
 
-  - Python (\>=3.5; \<3.9)
-  - Numpy (\>=1.5)
-  - Pandas (\>=0.19)
-  - Tensorflow (\>= 1.10) – **TensorFlow\>=2.2 now fully supported**
+  - Python (>=3.6; <3.11)
+  - Numpy (>=1.5)
+  - Pandas (>=0.19)
+  - TensorFlow (<2.12)
   - Matplotlib
   - Statmodels
   - Scipy
-  - TensorFlow Addons (\>=0.11 if using Tensorflow \>= 2.2)
+  - TensorFlow Addons (<0.20)
 
-Tensorflow also has a number of requirements, particularly if GPU
-acceleration is desired. See <https://www.tensorflow.org/install/> for
-details.
+Tensorflow also has a number of requirements, particularly if GPU acceleration is desired. See <https://www.tensorflow.org/install/> for details.
 
-## Example
+## Examples
 
 For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
-[example](https://github.com/MIDASverse/MIDASpy/blob/master/Examples/midas_demo.ipynb).
+[examples](https://github.com/MIDASverse/MIDASpy/blob/master/Examples/).
 
 ## Contributing to MIDASpy
 
-Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the London School of Economics. To apply, please send your CV (or a summary of relevant skills/experience)  to R.Lall@lse.ac.uk.
+Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the University of Oxford. To apply, please send your CV (or a summary of relevant skills/experience) to ranjit.lall@sjc.ox.ac.uk.
+
+## Version 1.2.4 (August 2023)
+
+*v1.2.4* 
+- Adds support for Python 3.9 and 3.10
+- Addresses deprecation warnings and other minor bug fixes
+- Resolves dependency issues and includes an updated `setup.py` file
+- Adds GitHub Actions workflows that trigger automatic tests on the latest Ubuntu, macOS, and Windows for Python versions 3.7 to 3.10 each time a push or pull request is made to the main branch
+- An additional Jupyter Notebook example that demonstrates the core functionalities of **MIDASpy**
 
 ## Version 1.2.3 (December 2022)
 
