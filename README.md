@@ -61,13 +61,13 @@ For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
 
 Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the University of Oxford. To apply, please send your CV (or a summary of relevant skills/experience) to ranjit.lall@sjc.ox.ac.uk.
 
-## Version 1.2.4 (June 2023)
+## Version 1.2.4 (August 2023)
 
 *v1.2.4* 
 - Adds support for Python 3.9 and 3.10
 - Addresses deprecation warnings and other minor bug fixes
 - Resolves dependency issues and includes an updated `setup.py` file
-- Adds GitHub Actions workflows that trigger automatic tests on the latest Ubuntu OS, macOS, and Windows for Python versions 3.7 to 3.10 each time a push or pull request is made to the main branch
+- Adds GitHub Actions workflows that trigger automatic tests on the latest Ubuntu, macOS, and Windows for Python versions 3.7 to 3.10 each time a push or pull request is made to the main branch
 - An additional Jupyter Notebook example that demonstrates the core functionalities of **MIDASpy**
 
 ## Version 1.2.3 (December 2022)
