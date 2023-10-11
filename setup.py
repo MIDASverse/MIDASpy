@@ -27,8 +27,8 @@ setup(
     long_description=long_description,
     url='http://github.com/MIDASverse/MIDASpy',
     project_urls={
-        'Software paper': 'https://doi.org/10.1017/pan.2020.49',
-        'Methods paper': 'https://doi.org/10.18637/jss.v107.i09',
+        'Method article': 'https://doi.org/10.1017/pan.2020.49',
+        'Software article': 'https://doi.org/10.18637/jss.v107.i09',
         'Source': 'http://github.com/MIDASverse/MIDASpy',
         'Issues': 'https://github.com/pypa/sampleproject/issues',
     },
