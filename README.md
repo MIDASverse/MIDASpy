@@ -1,5 +1,5 @@
 
-# MIDASpy<img src='MIDASpy_logo.png' align="right" height="139" /></a>
+# MIDASpy<img src='https://raw.githubusercontent.com/MIDASverse/MIDASpy/master/MIDASpy_logo.png' align="right" height="139" /></a>
 
 [![PyPI Latest Release](https://img.shields.io/pypi/v/midaspy.svg)](https://pypi.org/project/midaspy/)
 [![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-blue)](https://pypi.org/project/midaspy/)
