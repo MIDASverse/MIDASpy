@@ -26,9 +26,9 @@ For an implementation in R, see our **rMIDAS** repository
 
 For more information on MIDAS, the method underlying the software, see:
 
-Lall, Ranjit, and Thomas Robinson. 2022. "The MIDAS Touch: Accurate and Scalable Missing-Data Imputation with Deep Learning." _Political Analysis_ 30, no. 2: 179-196. doi:10.1017/pan.2020.49 [Published version](https://ranjitlall.github.io/assets/pdf/Lall%20and%20Robinson%202022%20PA.pdf). [Accepted version](http://eprints.lse.ac.uk/108170/1/Lall_Robinson_PA_Forthcoming.pdf).
+Lall, Ranjit, and Thomas Robinson. 2022. "The MIDAS Touch: Accurate and Scalable Missing-Data Imputation with Deep Learning." _Political Analysis_ 30, no. 2: 179-196. [doi:10.1017/pan.2020.49](https://doi.org/doi:10.1017/pan.2020.49) [Published version](https://ranjitlall.github.io/assets/pdf/Lall%20and%20Robinson%202022%20PA.pdf). [Accepted version](http://eprints.lse.ac.uk/108170/1/Lall_Robinson_PA_Forthcoming.pdf).
 
-Lall, Ranjit, and Thomas Robinson. 2023. "Efficient Multiple Imputation for Diverse Data in Python and R: MIDASpy and rMIDAS." _Journal of Statistical Software_ 107, no. 9: 1-38. doi:10.18637/jss.v107.i09 [Accepted version](https://ranjitlall.github.io/assets/pdf/jss4379.pdf).
+Lall, Ranjit, and Thomas Robinson. 2023. "Efficient Multiple Imputation for Diverse Data in Python and R: MIDASpy and rMIDAS." _Journal of Statistical Software_ 107, no. 9: 1-38. [doi:10.18637/jss.v107.i09](https://doi.org/doi:10.18637/jss.v107.i09) [Accepted version](https://ranjitlall.github.io/assets/pdf/jss4379.pdf).
 
 ## Installation
 
