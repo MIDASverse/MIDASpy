@@ -20,7 +20,7 @@ else:
 setup(
     name='MIDASpy',
     packages=['MIDASpy'],
-    version='1.2.5',
+    version='1.3.0',
     license='Apache',
     description='Multiple Imputation with Denoising Autoencoders',
     long_description_content_type='text/markdown',
@@ -29,8 +29,8 @@ setup(
     project_urls={
         'Method article': 'https://doi.org/10.1017/pan.2020.49',
         'Software article': 'https://doi.org/10.18637/jss.v107.i09',
-        'Source': 'http://github.com/MIDASverse/MIDASpy',
-        'Issues': 'https://github.com/pypa/sampleproject/issues',
+        'Source': 'https://github.com/MIDASverse/MIDASpy',
+        'Issues': 'https://github.com/MIDASverse/MIDASpy/issues',
     },
     author='Ranjit Lall, Alex Stenlake, and Thomas Robinson',
     author_email='R.Lall@lse.ac.uk',

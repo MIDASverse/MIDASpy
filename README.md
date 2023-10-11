@@ -61,7 +61,7 @@ For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
 
 Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the University of Oxford. To apply, please send your CV (or a summary of relevant skills/experience) to ranjit.lall@sjc.ox.ac.uk.
 
-## Version 1.2.5 (October 2023)
+## Version 1.3.0 (October 2023)
 
 - Minor update to reflect publication of accompanying article in Journal of Statistical Software
 
