@@ -26,9 +26,9 @@ For an implementation in R, see our **rMIDAS** repository
 
 For more information on MIDAS, the method underlying the software, see:
 
-Lall, Ranjit, and Thomas Robinson. 2022. "The MIDAS Touch: Accurate and Scalable Missing-Data Imputation with Deep Learning." _Political Analysis_ 30, no. 2: 179-196. [Published version](https://ranjitlall.github.io/assets/pdf/Lall%20and%20Robinson%202022%20PA.pdf). [Accepted version](http://eprints.lse.ac.uk/108170/1/Lall_Robinson_PA_Forthcoming.pdf).
+Lall, Ranjit, and Thomas Robinson. 2022. "The MIDAS Touch: Accurate and Scalable Missing-Data Imputation with Deep Learning." _Political Analysis_ 30, no. 2: 179-196. doi:10.1017/pan.2020.49 [Published version](https://ranjitlall.github.io/assets/pdf/Lall%20and%20Robinson%202022%20PA.pdf). [Accepted version](http://eprints.lse.ac.uk/108170/1/Lall_Robinson_PA_Forthcoming.pdf).
 
-Lall, Ranjit, and Thomas Robinson. 2023. "Efficient Multiple Imputation for Diverse Data in Python and R: MIDASpy and rMIDAS." _Journal of Statistical Software_. [Accepted version](https://ranjitlall.github.io/assets/pdf/jss4379.pdf) (in press).
+Lall, Ranjit, and Thomas Robinson. 2023. "Efficient Multiple Imputation for Diverse Data in Python and R: MIDASpy and rMIDAS." _Journal of Statistical Software_ 107, no. 9: 1-38. doi:10.18637/jss.v107.i09 [Accepted version](https://ranjitlall.github.io/assets/pdf/jss4379.pdf).
 
 ## Installation
 
@@ -61,9 +61,12 @@ For a simple demonstration of **MIDASpy**, see our Jupyter Notebook
 
 Interested in contributing to **MIDASpy**? We are looking to hire a research assistant to work part-time (flexibly) to help us build out new features and integrate our software with existing machine learning pipelines. You would be paid the standard research assistant rate at the University of Oxford. To apply, please send your CV (or a summary of relevant skills/experience) to ranjit.lall@sjc.ox.ac.uk.
 
+## Version 1.2.5 (October 2023)
+
+- Minor update to reflect publication of accompanying article in Journal of Statistical Software
+
 ## Version 1.2.4 (August 2023)
 
-*v1.2.4* 
 - Adds support for Python 3.9 and 3.10
 - Addresses deprecation warnings and other minor bug fixes
 - Resolves dependency issues and includes an updated `setup.py` file
