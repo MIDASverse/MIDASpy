@@ -34,7 +34,6 @@ setup(
     },
     author='Ranjit Lall, Alex Stenlake, and Thomas Robinson',
     author_email='R.Lall@lse.ac.uk',
-    download_url='https://github.com/MIDASverse/MIDASpy/archive/v1.3.1.tar.gz',
     python_requires='>=3.6, <3.11',
     install_requires=install_requires,
     keywords=['multiple imputation', 'neural networks', 'tensorflow'],
