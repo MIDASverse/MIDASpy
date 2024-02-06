@@ -1978,24 +1978,35 @@ def cat_conv(cat_data):
       dataframe.
 
       Args:
-        cat_data: A pd.DataFrame. A dataframe containing only categorical columns to be
+        cat_data: A pd.DataFrame or pd.Series. A Dataframe or Series containing only categorical columns to be
         one-hot encoded.
 
       Returns:
         cat_construct: pd.DataFrame. A one-hot encoded version of the input data.
         cat_col_names: List of lists. Nested list of the one-hot encoded variable names,
-        that can be passed into the MIDASpy .build() function."""
+        that can be passed into the MIDASpy .build() function.
+    """
 
     cat_col_names = []
-
     cat_construct = []
+    
+    if isinstance(cat_data, pd.DataFrame):
+        for column in cat_data.columns:
+            na_temp = cat_data[column].isnull()
+            temp = pd.get_dummies(cat_data[column], prefix=column, dtype=np.uint8)
+            temp[na_temp] = np.nan
+            cat_construct.append(temp)
+            cat_col_names.append(list(temp.columns.values))
+    
+        cat_construct = pd.concat(cat_construct, axis=1)
 
-    for column in cat_data.columns:
-        na_temp = cat_data[column].isnull()
-        temp = pd.get_dummies(cat_data[column], prefix=column, dtype=np.uint8)
-        temp[na_temp] = np.nan
-        cat_construct.append(temp)
-        cat_col_names.append(list(temp.columns.values))
-
-    cat_construct = pd.concat(cat_construct, axis=1)
+    elif isinstance(cat_data, pd.Series):
+        na_temp = cat_data.isnull()
+        cat_construct = pd.get_dummies(cat_data, dtype=np.uint8)
+        cat_construct[na_temp] = np.nan
+        cat_col_names = [list(cat_construct.columns.values)]
+        
+    else:
+        raise ValueError("cat_data must be either a pd.DataFrame or pd.Series")
+        
     return cat_construct, cat_col_names
