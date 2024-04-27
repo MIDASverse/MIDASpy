@@ -174,14 +174,14 @@ class Midas(object):
 
         # Sanity Check output_structure:
         if output_structure is None:
-            output_structure = [16, 16, 32]
+            output_structure = [16, 16, 16, 32]
         if isinstance(output_structure, int):
-            self.output_structure = [output_structure] * 3
-        elif (individual_outputs is True) | (len(output_structure) == 3):
+            self.output_structure = [output_structure] * 4
+        elif (individual_outputs is True) | (len(output_structure) == 4):
             self.output_structure = output_structure
         else:
-            raise TypeError("The output transform assignment must take the form of an integer, a list of three "
-                            "elements (cont, bin, cat), or individual values must be specified.")
+            raise TypeError("The output transform assignment must take the form of an integer, a list of four "
+                            "elements (cont, pos, bin, cat), or individual values must be specified.")
 
         if seed is not None:
             os.environ['PYTHONHASHSEED'] = str(seed)
@@ -320,6 +320,7 @@ class Midas(object):
 
     def build_model(self,
                     imputation_target,
+                    positive_columns=None,
                     binary_columns=None,
                     softmax_columns=None,
                     unsorted=True,
@@ -360,6 +361,9 @@ class Midas(object):
           softmax_columns: List of lists. The outer list should include all non-binary
           categorical variables in the input dataset. Each inner list should contain
           the mutually exclusive set of possible classes for each of these variables.
+          
+          positive_columns: List of names. A list of all continuous variables that are
+          non-negative, i.e. x >= 0.
 
           unsorted: Boolean. Specifies whether the input dataset has been pre-ordered
           in terms of variable type (default = True, denoting no sorting). If
@@ -386,6 +390,7 @@ class Midas(object):
         self.original_columns = imputation_target.columns
         cont_exists = False
         cat_exists = False
+        pos_exists = False
         in_size = imputation_target.shape[1]
         if additional_data is not None:
             add_size = additional_data.shape[1]
@@ -411,6 +416,14 @@ class Midas(object):
             else:
                 for digit in softmax_columns:
                     size_index.append(digit)
+        if positive_columns is not None:
+            if unsorted:
+                imputation_target, chunk = self._sort_cols(imputation_target,
+                                                           positive_columns)
+                size_index.insert(0, chunk)
+            else:
+                size_index.insert(0, positive_columns)
+            pos_exists = True
         if sum(size_index) < in_size:
             chunk = in_size - sum(size_index)
             size_index.insert(0, chunk)
@@ -448,24 +461,44 @@ class Midas(object):
             struc_list = self.layer_structure.copy()
             struc_list.insert(0, in_size + add_size)
             outputs_struc = []
+            
+            # build type dictionary for proper indexing
+            n = 0
+            type_dict = {}
+            if cont_exists:
+                type_dict[n] = 'cont'
+                n += 1
+            if pos_exists:
+                type_dict[n] = 'pos'
+                n += 1
+            if cat_exists:
+                type_dict[n] = 'bin'
+                n += 1
+                
             for n in range(len(size_index)):
-                if n == 0:
-                    if cont_exists:
-                        outputs_struc += ["cont"] * size_index[n]
-                    elif cat_exists:
-                        outputs_struc += ["bin"] * size_index[n]
-
-                    else:
-                        outputs_struc += [size_index[n]]
-
-                elif n == 1:
-                    if cont_exists and cat_exists:
-                        outputs_struc += ["bin"] * size_index[n]
-
-                    else:
-                        outputs_struc += [size_index[n]]
+                
+                if type_dict != {} and n <= max(type_dict.keys()):  
+                    outputs_struc += type_dict[n] * size_index[n]
                 else:
                     outputs_struc += [size_index[n]]
+                
+                # if n == 0:
+                #     if cont_exists:
+                #         outputs_struc += ["cont"] * size_index[n]
+                #     elif cat_exists:
+                #         outputs_struc += ["bin"] * size_index[n]
+
+                #     else:
+                #         outputs_struc += [size_index[n]]
+
+                # elif n == 1:
+                #     if cont_exists and cat_exists:
+                #         outputs_struc += ["bin"] * size_index[n]
+
+                #     else:
+                #         outputs_struc += [size_index[n]]
+                # else:
+                #     outputs_struc += [size_index[n]]
 
             if self.manual_outputs is True:
                 output_layer_size = np.sum(self.output_structure)
@@ -475,10 +508,12 @@ class Midas(object):
                 for item in outputs_struc:
                     if item == "cont":
                         output_layer_structure.append(self.output_structure[0])
-                    if item == "bin":
+                    if item == "pos":
                         output_layer_structure.append(self.output_structure[1])
-                    if type(item) == int:
+                    if item == "bin":
                         output_layer_structure.append(self.output_structure[2])
+                    if type(item) == int:
+                        output_layer_structure.append(self.output_structure[3])
                     output_layer_size = np.sum(output_layer_structure)
 
             # Instantiate and initialise variables
@@ -668,7 +703,7 @@ class Midas(object):
             for n in range(len(outputs_struc)):
                 na_adj = tf.cast(tf.math.count_nonzero(na_split[n]), tf.float32) \
                          / tf.cast(tf.size(input=na_split[n]), tf.float32)
-                if outputs_struc[n] == 'cont':
+                if outputs_struc[n] in ['cont','pos']:
                     if 'rmse' not in self.output_types:
                         self.output_types.append('rmse')
                     cost_list.append(tf.sqrt(
@@ -696,6 +731,8 @@ class Midas(object):
                 for n in range(len(outputs_struc)):
                     if outputs_struc[n] == 'cont':
                         output_list.append(out_split[n])
+                    elif outputs_struc[n] == 'pos':
+                        output_list.append(tf.nn.relu(out_split[n]))
                     elif outputs_struc[n] == 'bin':
                         output_list.append(tf.nn.sigmoid(out_split[n]))
                     elif type(outputs_struc[n]) == int:
@@ -1469,6 +1506,7 @@ class Midas(object):
 
     def build_model_pipeline(self,
                              data_sample,
+                             positive_columns=None,
                              binary_columns=None,
                              softmax_columns=None,
                              unsorted=True,
@@ -1502,6 +1540,7 @@ class Midas(object):
         'for' loop which constructs your dummy variables.
         """
         self.input_is_pipeline = True
+        p_c = positive_columns
         b_c = binary_columns
         s_c = softmax_columns
         us = unsorted
@@ -1510,7 +1549,7 @@ class Midas(object):
         cea = crossentropy_adj
         l_s = loss_scale
 
-        self.build_model(data_sample, b_c, s_c, us, a_d, vb, cea, l_s)
+        self.build_model(data_sample, p_c, b_c, s_c, us, a_d, vb, cea, l_s)
 
         return self
 
