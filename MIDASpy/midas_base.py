@@ -426,6 +426,7 @@ class Midas(object):
             cont_exists = True
             if positive_columns is not None:
                 self.pos_idx = imputation_target.columns.get_indexer(positive_columns)
+                print("Note: Positive columns have been specified. If you have scaled the data prior to imputation, please ensure that these columns are scaled to a non-negative range, otherwise the model fit will be unreliable.")
             if not sum(size_index) == in_size:
                 raise ValueError("Sorting columns has failed")
         if verbose:
