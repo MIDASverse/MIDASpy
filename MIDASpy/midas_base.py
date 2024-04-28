@@ -478,9 +478,11 @@ class Midas(object):
             for n in range(len(size_index)):
                 
                 if type_dict != {} and n <= max(type_dict.keys()):  
-                    outputs_struc += type_dict[n] * size_index[n]
+                    outputs_struc += [type_dict[n]] * size_index[n]
                 else:
                     outputs_struc += [size_index[n]]
+                    
+                print(outputs_struc)
                 
                 # if n == 0:
                 #     if cont_exists:
