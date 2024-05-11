@@ -322,6 +322,7 @@ class Midas(object):
                     imputation_target,
                     binary_columns=None,
                     softmax_columns=None,
+                    positive_columns=None,
                     unsorted=True,
                     additional_data=None,
                     verbose=True,
@@ -360,6 +361,13 @@ class Midas(object):
           softmax_columns: List of lists. The outer list should include all non-binary
           categorical variables in the input dataset. Each inner list should contain
           the mutually exclusive set of possible classes for each of these variables.
+          
+          positive_columns: List of names. A list of continuous variables to be kept 
+          strictly non-negative. Note, this argument is not necessary to run the model,
+          and should only be used when you need to guarantee the model will not impute
+          negative values for certain variables. Particular care must be taken if
+          pre-scaling the data: you should ensure the scaled input for these variables
+          is also non-negative.
 
           unsorted: Boolean. Specifies whether the input dataset has been pre-ordered
           in terms of variable type (default = True, denoting no sorting). If
@@ -384,6 +392,7 @@ class Midas(object):
             raise ValueError("Imputation target contains no missing values. Please ensure "
                              "missing values are encoded as type np.nan")
         self.original_columns = imputation_target.columns
+        self.pos_idx = None
         cont_exists = False
         cat_exists = False
         in_size = imputation_target.shape[1]
@@ -415,6 +424,9 @@ class Midas(object):
             chunk = in_size - sum(size_index)
             size_index.insert(0, chunk)
             cont_exists = True
+            if positive_columns is not None:
+                self.pos_idx = imputation_target.columns.get_indexer(positive_columns)
+                print("Note: Positive columns have been specified. If you have scaled the data prior to imputation, please ensure that these columns are scaled to a non-negative range, otherwise the model fit will be unreliable.")
             if not sum(size_index) == in_size:
                 raise ValueError("Sorting columns has failed")
         if verbose:
@@ -695,7 +707,10 @@ class Midas(object):
                 # Break outputs into their parts
                 for n in range(len(outputs_struc)):
                     if outputs_struc[n] == 'cont':
-                        output_list.append(out_split[n])
+                        if self.pos_idx is not None and n in self.pos_idx:
+                            output_list.append(tf.nn.relu(out_split[n]))
+                        else:
+                            output_list.append(out_split[n])
                     elif outputs_struc[n] == 'bin':
                         output_list.append(tf.nn.sigmoid(out_split[n]))
                     elif type(outputs_struc[n]) == int:
