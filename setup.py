@@ -20,7 +20,7 @@ else:
 setup(
     name='MIDASpy',
     packages=['MIDASpy'],
-    version='1.3.1',
+    version='1.4.0',
     license='Apache',
     description='Multiple Imputation with Denoising Autoencoders',
     long_description_content_type='text/markdown',
