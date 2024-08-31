@@ -9,7 +9,7 @@ long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 if sys.version_info < (3, 6):
     sys.exit("Sorry, Python 3.5 is no longer supported. Please use Python versions from 3.6 to 3.10")
 
-install_requires = ['numpy>=1.5', 'scikit-learn', 'matplotlib', 'pandas>=0.19', 'tensorflow_addons<0.20', 'statsmodels', 'scipy']
+install_requires = ['numpy>=1.5,<=1.26.4', 'scikit-learn', 'matplotlib', 'pandas>=0.19', 'tensorflow_addons<0.20', 'statsmodels', 'scipy']
 if sys.version_info >= (3, 8) and sys.version_info < (3, 11):
     install_requires.append('tensorflow<2.12.0; sys_platform != "darwin" or platform_machine != "arm64"')
     install_requires.append('tensorflow-macos<2.12.0; sys_platform == "darwin" and platform_machine == "arm64"')
